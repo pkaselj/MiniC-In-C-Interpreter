@@ -53,3 +53,5 @@ dkms.conf
 
 # debug information files
 *.dwo
+/.vs/MiniC-Interpreter-C
+/MiniC-In.69e39e5b/x64/Debug
