@@ -28,40 +28,35 @@ StringView sv_create_s(const char* data, size_t length)
 	};
 }
 
-StringView sv_substring(const StringView* sv, size_t index_start, size_t length)
+StringView sv_substring(const StringView sv, size_t index_start, size_t length)
 {
-	if (!sv)
-	{
-		return sv_create_empty();
-	}
-
-	if (index_start + length > sv->size)
+	if (index_start + length > sv.size)
 	{
 		return sv_create_empty();
 	}
 
 	StringView subsv = sv_create_empty();
-	subsv.data = &sv->data[index_start];
+	subsv.data = &sv.data[index_start];
 	subsv.size = length;
 	return subsv;
 }
 
-StringView sv_substring_to_end(const StringView* sv, size_t index_start)
+StringView sv_substring_to_end(const StringView sv, size_t index_start)
 {
-	if (!sv || !sv->data || sv->size <= 0)
+	if (!sv.data || sv.size <= 0)
 	{
 		return sv_create_empty();
 	}
 
 	StringView subsv = sv_create_empty();
-	subsv.data = &sv->data[index_start];
-	subsv.size = sv->size - index_start;
+	subsv.data = &sv.data[index_start];
+	subsv.size = sv.size - index_start;
 	return subsv;
 }
 
-bool sv_is_empty(const StringView* sv)
+bool sv_is_empty(const StringView sv)
 {
-	return (!sv || !sv->data || sv->size <= 0);
+	return (!sv.data || sv.size <= 0);
 }
 
 StringView sv_create_empty()
@@ -73,25 +68,28 @@ StringView sv_create_empty()
 	};
 }
 
-bool sv_begins_with(const StringView* sv, const StringView* match)
+bool sv_begins_with(const StringView sv, const StringView match)
 {
-	if (   !sv
-		|| !sv->data
-		||  sv->size <= 0
-		|| !match
-		|| !match->data
-		||  match->size	<= 0
+	if (   !sv.data
+		||  sv.size <= 0
+		|| !match.data
+		||  match.size	<= 0
 		)
 	{
 		return false;
 	}
 
-	if (match->size < sv->size)
+	if (sv.size < match.size)
 	{
 		return false;
 	}
 
-	return (0 == strncmp(sv->data, match->data, match->size));
+	return (0 == strncmp(sv.data, match.data, match.size));
+}
+
+bool sv_equal(const StringView sv, const StringView match)
+{
+	return (sv.size == match.size) && sv_begins_with(sv, match);
 }
 
 // -----------------------

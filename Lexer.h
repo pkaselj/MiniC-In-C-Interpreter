@@ -50,9 +50,10 @@ struct Token
     union
     {
         StringView as_string;
+        double as_number;
     } value;
 
-    long length; // Length of token in characters
+    size_t length; // Length of token in characters
 };
 
 typedef struct Token Token;
@@ -75,4 +76,4 @@ Token* tl_pop(TokenList* list);
 // Pushed to the end.
 void tl_push(TokenList* list, TRANSFER Token* token);
 
-TokenList* lexer_perform(const StringView* input);
+TokenList* lexer_perform(const StringView input);
