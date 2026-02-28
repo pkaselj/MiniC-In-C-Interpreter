@@ -396,8 +396,11 @@ void tl_free(TRANSFER TokenList* list)
 	while(list->first)
 	{
 		Token* token = tl_pop(list);
-
+		tok_free(token);
 	}
+
+	list->first = NULL;
+	list->last = NULL;
 }
 
 Token* tl_pop(TokenList* list)
