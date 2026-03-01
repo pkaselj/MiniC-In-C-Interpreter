@@ -1,5 +1,6 @@
-#include "lexer.h"
+#include "Lexer.h"
 #include "Utils.h"
+#include "List.h"
 
 #include <string.h>
 #include <stdlib.h>
@@ -15,7 +16,7 @@ static void tok_free_identifier(Token* token);
 // Token creation and destruction
 static Token* _tok_create_empty(void)
 {
-	Token* token = (Token*)malloc(sizeof(Token) / sizeof(char));
+	Token* token = (Token*)malloc(sizeof(Token));
 	assert(token);
 	memset(token, 0, sizeof(token));
 	return token;
@@ -61,7 +62,7 @@ static Token* tok_create_operator(TokenType operator, size_t length)
 	return token;
 }
 
-static* tok_create_number(double number, size_t length)
+static Token* tok_create_number(double number, size_t length)
 {
 	Token* token = _tok_create_empty();
 	token->type = TT_NUMBER;
@@ -300,9 +301,9 @@ static Token* lexer_parse_punctuation(const StringView buffer)
 	return NULL;
 }
 
-TokenList* lexer_perform(const StringView input)
+List* lexer_perform(const StringView input)
 {
-	TokenList* list = tl_create();
+	List* list = list_create();
 
 	size_t i = 0;
 	while (i < input.size)
@@ -327,7 +328,8 @@ TokenList* lexer_perform(const StringView input)
 		if (token != NULL)
 		{
 			i += token->length;
-			tl_push(list, token);
+			ListNode* node = list_create_node(token, tok_free);
+			list_push(list, node);
 			continue;
 		}
 
@@ -335,7 +337,8 @@ TokenList* lexer_perform(const StringView input)
 		if (token != NULL)
 		{
 			i += token->length;
-			tl_push(list, token);
+			ListNode* node = list_create_node(token, tok_free);
+			list_push(list, node);
 			continue;
 		}
 
@@ -343,7 +346,8 @@ TokenList* lexer_perform(const StringView input)
 		if (token != NULL)
 		{
 			i += token->length;
-			tl_push(list, token);
+			ListNode* node = list_create_node(token, tok_free);
+			list_push(list, node);
 			continue;
 		}
 
@@ -351,7 +355,8 @@ TokenList* lexer_perform(const StringView input)
 		if (token != NULL)
 		{
 			i += token->length;
-			tl_push(list, token);
+			ListNode* node = list_create_node(token, tok_free);
+			list_push(list, node);
 			continue;
 		}
 
@@ -359,7 +364,8 @@ TokenList* lexer_perform(const StringView input)
 		if (token != NULL)
 		{
 			i += token->length;
-			tl_push(list, token);
+			ListNode* node = list_create_node(token, tok_free);
+			list_push(list, node);
 			continue;
 		}
 
@@ -370,86 +376,7 @@ TokenList* lexer_perform(const StringView input)
 	return list;
 
 _cleanup:
-	tl_free(list);
+	list_free(list);
 	return NULL;
 }
 
-
-// ---------------- Token List
-
-TokenList* tl_create(void)
-{
-	TokenList* list = (TokenList*)malloc(sizeof(TokenList) / sizeof(char));
-	if (list)
-	{
-		list->first = NULL;
-		list->last = NULL;
-	}
-	return list;
-}
-
-void tl_free(TRANSFER TokenList* list)
-{
-	if (!list)
-		return;
-
-	while(list->first)
-	{
-		Token* token = tl_pop(list);
-		tok_free(token);
-	}
-
-	list->first = NULL;
-	list->last = NULL;
-}
-
-Token* tl_pop(TokenList* list)
-{
-	if (!list)
-		return NULL;
-
-	if (!list->first)
-		return NULL;
-
-	Token* token = list->first;
-
-	if (list->first == list->last)
-	{
-		list->first = NULL;
-		list->last = NULL;
-	}
-	else
-	{
-		Token* next = list->first->next;
-
-		list->first = next;
-		list->first->previous = NULL;
-	}
-
-	token->next = NULL;
-	token->previous = NULL;
-
-	return token;
-}
-
-void tl_push(TokenList* list, TRANSFER Token* token)
-{
-	if (!list || !token)
-		return;
-
-	if (!list->first)
-	{
-		assert(list->last == NULL);
-
-		list->first = list->last = token;
-		token->next = token->previous = NULL;
-	}
-	else
-	{
-		list->last->next = token;
-		token->previous = list->last;
-		list->last = token;
-
-		token->next = NULL;
-	}
-}

@@ -5,3 +5,6 @@
 // Using the pointer after passing to the function
 // causes udnefined behaviour
 #define TRANSFER
+
+// Returns non-owning pointer
+#define NONOWNING

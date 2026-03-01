@@ -2,6 +2,7 @@
 #include <string.h>
 
 #include "Lexer.h"
+#include "List.h"
 
 const char* _GetTokenTypeString(TokenType type)
 {
@@ -75,7 +76,7 @@ void _PrintToken(Token* token)
 	printf("[Token type=%s length=%llu data=%s]\n", token_type, length, data);
 }
 
-void PrintTokens(TokenList* list)
+void PrintTokens(List* list)
 {
 	if (!list)
 	{
@@ -83,18 +84,18 @@ void PrintTokens(TokenList* list)
 		return;
 	}
 
-	Token* t = list->first;
-	while (t)
+	ListConstIterator* iter = list_create_iterator(list);
+	ListNode* current = NULL;
+	while (current = list_iterator_advance(iter))
 	{
-		_PrintToken(t);
-		t = t->next;
+		_PrintToken((Token*)list_node_data(current));
 	}
 }
 
 int main(int argc, char* argv[])
 {
 	StringView input = sv_create("if(x) { y  = 4; } else { y = 5; } function a(b, c, d){ b + c * d; }");
-	TokenList* list = lexer_perform(input);
+	List* list = lexer_perform(input);
 
 	PrintTokens(list);
 

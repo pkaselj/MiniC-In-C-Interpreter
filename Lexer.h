@@ -4,6 +4,11 @@
 #include "Common.h"
 #include "Utils.h"
 
+// -- Forward declarations
+typedef struct List List;
+
+// -- Type declarations
+
 typedef enum TokenType
 {
     TT_NUMBER = 0,
@@ -42,9 +47,6 @@ typedef enum TokenType
 
 struct Token
 {
-    struct Token* next;
-    struct Token* previous;
-
     TokenType type;
 
     union
@@ -58,22 +60,7 @@ struct Token
 
 typedef struct Token Token;
 
-void tok_free(TRANSFER Token* token);
+// -- Public functions
 
-struct TokenList
-{
-    struct Token* first;
-    struct Token* last;
-};
-
-typedef struct TokenList TokenList;
-
-TokenList* tl_create(void);
-void tl_free(TRANSFER TokenList* list);
-
-// Pops the first token. NULL on empty
-Token* tl_pop(TokenList* list);
-// Pushed to the end.
-void tl_push(TokenList* list, TRANSFER Token* token);
-
-TokenList* lexer_perform(const StringView input);
+// Returns list of tokens.
+List* lexer_perform(const StringView input);

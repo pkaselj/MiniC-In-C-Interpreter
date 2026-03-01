@@ -1,5 +1,7 @@
 #pragma once
 
+#include <stddef.h>
+
 // --- Forward declarations
 typedef struct TokenList TokenList;
 
@@ -33,7 +35,7 @@ struct AstNode
 		 // TODO: Create Generic List in C
 		struct
 		{
-
+			int _;
 		} ast_program;
 	} u;
 };
@@ -49,4 +51,6 @@ typedef struct AstTree AstTree;
 
 // ---- Public functions
 
-AstTree* parser_perform(TokenList* tokens);
+AstTree* parser_perform(TokenList* tokens) {
+	return NULL;
+}
