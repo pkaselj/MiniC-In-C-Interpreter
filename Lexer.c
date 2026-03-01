@@ -9,11 +9,11 @@
 
 // ---------------- Lexer
 
-void tok_free_string(Token* token);
-void tok_free_identifier(Token* token);
+static void tok_free_string(Token* token);
+static void tok_free_identifier(Token* token);
 
 // Token creation and destruction
-Token* _tok_create_empty(void)
+static Token* _tok_create_empty(void)
 {
 	Token* token = (Token*)malloc(sizeof(Token) / sizeof(char));
 	assert(token);
@@ -21,7 +21,7 @@ Token* _tok_create_empty(void)
 	return token;
 }
 
-void tok_free(TRANSFER Token* token)
+static void tok_free(TRANSFER Token* token)
 {
 	assert(token);
 
@@ -39,7 +39,7 @@ void tok_free(TRANSFER Token* token)
 	free(token);
 }
 
-Token* tok_create_string(const char* data, size_t length)
+static Token* tok_create_string(const char* data, size_t length)
 {
 	Token* token = _tok_create_empty();
 	token->type = TT_STRING;
@@ -53,7 +53,7 @@ Token* tok_create_string(const char* data, size_t length)
 	return token;
 }
 
-Token* tok_create_operator(TokenType operator, size_t length)
+static Token* tok_create_operator(TokenType operator, size_t length)
 {
 	Token* token = _tok_create_empty();
 	token->type = operator;
@@ -61,7 +61,7 @@ Token* tok_create_operator(TokenType operator, size_t length)
 	return token;
 }
 
-Token* tok_create_number(double number, size_t length)
+static* tok_create_number(double number, size_t length)
 {
 	Token* token = _tok_create_empty();
 	token->type = TT_NUMBER;
@@ -70,7 +70,7 @@ Token* tok_create_number(double number, size_t length)
 	return token;
 }
 
-Token* tok_create_keyword(TokenType keyword, size_t length)
+static Token* tok_create_keyword(TokenType keyword, size_t length)
 {
 	Token* token = _tok_create_empty();
 	token->type = keyword;
@@ -78,7 +78,7 @@ Token* tok_create_keyword(TokenType keyword, size_t length)
 	return token;
 }
 
-Token* tok_create_identifier(StringView id)
+static Token* tok_create_identifier(StringView id)
 {
 	Token* token = _tok_create_empty();
 	token->type = TT_ID;
@@ -92,7 +92,7 @@ Token* tok_create_identifier(StringView id)
 	return token;
 }
 
-Token* tok_create_punctuation(TokenType punctuation, size_t length)
+static Token* tok_create_punctuation(TokenType punctuation, size_t length)
 {
 	Token* token = _tok_create_empty();
 	token->type = punctuation;
@@ -102,7 +102,7 @@ Token* tok_create_punctuation(TokenType punctuation, size_t length)
 
 // -----
 
-void tok_free_string(Token* token)
+static void tok_free_string(Token* token)
 {
 	assert(token);
 	assert(token->type == TT_STRING);
@@ -113,7 +113,7 @@ void tok_free_string(Token* token)
 	token->value.as_string.size = 0;
 }
 
-void tok_free_identifier(Token* token)
+static void tok_free_identifier(Token* token)
 {
 	assert(token);
 	assert(token->type == TT_ID);
@@ -127,7 +127,7 @@ void tok_free_identifier(Token* token)
 // Lexing sub-functions
 
 // Returns number of consumed characters
-size_t lexer_parse_whitespace(const StringView buffer)
+static size_t lexer_parse_whitespace(const StringView buffer)
 {
 	size_t i = 0;
 	while (i < buffer.size && isblank(buffer.data[i]))
@@ -137,7 +137,7 @@ size_t lexer_parse_whitespace(const StringView buffer)
 	return i;
 }
 
-Token* lexer_parse_string(const StringView buffer)
+static Token* lexer_parse_string(const StringView buffer)
 {
 
 	if (buffer.size < 2)
@@ -169,7 +169,7 @@ Token* lexer_parse_string(const StringView buffer)
 }
 
 
-Token* lexer_parse_operator(const StringView buffer)
+static Token* lexer_parse_operator(const StringView buffer)
 {
 		 if (sv_begins_with(buffer, sv_create("==")))
 		return tok_create_operator(TT_OP_EQ, 2);
@@ -206,7 +206,7 @@ Token* lexer_parse_operator(const StringView buffer)
 }
 
 // Only 123.456 format for now - TODO
-Token* lexer_parse_number(const StringView buffer)
+static Token* lexer_parse_number(const StringView buffer)
 {
 	double number = 0;
 	double current = 0;
@@ -249,7 +249,7 @@ Token* lexer_parse_number(const StringView buffer)
 	return tok_create_number(number, i);
 }
 
-Token* lexer_parse_identifier_or_keyword(const StringView buffer)
+static Token* lexer_parse_identifier_or_keyword(const StringView buffer)
 {
 	size_t i = 0;
 	while (i < buffer.size)
@@ -284,7 +284,7 @@ Token* lexer_parse_identifier_or_keyword(const StringView buffer)
 	return tok_create_identifier(id);
 }
 
-Token* lexer_parse_punctuation(const StringView buffer)
+static Token* lexer_parse_punctuation(const StringView buffer)
 {
 		 if (sv_begins_with(buffer, sv_create("(")))
 		return tok_create_keyword(TT_O_PAREN, 1);

@@ -130,10 +130,12 @@
   <ItemGroup>
     <ClCompile Include="Lexer.c" />
     <ClCompile Include="main.c" />
+    <ClCompile Include="Parser.c" />
     <ClCompile Include="Utils.c" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Common.h" />
+    <ClInclude Include="Parser.h" />
     <ClInclude Include="Utils.h" />
     <ClInclude Include="Lexer.h" />
   </ItemGroup>
