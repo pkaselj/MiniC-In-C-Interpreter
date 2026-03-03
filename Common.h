@@ -8,3 +8,5 @@
 
 // Returns non-owning pointer
 #define NONOWNING
+
+#define UNUSED(X) ((void)X);

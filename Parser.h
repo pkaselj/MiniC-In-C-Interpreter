@@ -4,9 +4,6 @@
 #include "List.h"
 #include "Lexer.h"
 
-// --- Forward declarations
-typedef struct TokenList TokenList;
-
 // --- Types
 
 typedef enum
@@ -133,6 +130,4 @@ typedef struct AstTree AstTree;
 
 // ---- Public functions
 
-AstTree* parser_perform(TokenList* tokens) {
-	return NULL;
-}
+AstTree* parser_perform(List* tokens);

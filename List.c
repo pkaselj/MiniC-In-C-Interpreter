@@ -73,6 +73,14 @@ ListNode* list_pop(List* list)
 	return node;
 }
 
+ListNode* list_peek(List* list)
+{
+	if (!list)
+		return NULL;
+
+	return list->first;
+}
+
 void list_push(List* list, TRANSFER ListNode* node)
 {
 	if (!list || !node)
@@ -129,6 +137,7 @@ void list_free_node(TRANSFER ListNode* node)
 struct ListConstIterator
 {
 	ListNode* current;
+	size_t index;
 };
 
 ListConstIterator* list_create_iterator(List* list)
@@ -140,6 +149,7 @@ ListConstIterator* list_create_iterator(List* list)
 
 	ListConstIterator* iter = (ListConstIterator*)malloc(sizeof(ListConstIterator));
 	iter->current = list->first;
+	iter->index = 0;
 	return iter;
 }
 
@@ -151,11 +161,22 @@ void list_free_iterator(ListConstIterator* iter)
 	}
 
 	iter->current = NULL;
+	iter->index = 0;
 
 	free(iter);
 }
 
 ListNode* list_iterator_current(ListConstIterator* iter)
+{
+	if (!iter)
+	{
+		return NULL;
+	}
+
+	return iter->current;
+}
+
+NONOWNING ListNode* list_iterator_get(ListConstIterator* iter)
 {
 	if (!iter)
 	{
@@ -179,10 +200,18 @@ NONOWNING ListNode* list_iterator_advance(ListConstIterator* iter)
 	}
 
 	iter->current = iter->current->next;
+	iter->index++;
 	return iter->current;
 }
 
-NONOWNING void* list_node_data(ListNode* node)
+size_t list_interator_index(ListConstIterator* iter)
+{
+	assert(iter);
+
+	return iter->index;
+}
+
+NONOWNING void* list_node_data_get(ListNode* node)
 {
 	if (!node)
 	{
@@ -190,4 +219,19 @@ NONOWNING void* list_node_data(ListNode* node)
 	}
 
 	return node->data;
+}
+
+void* list_node_data_release(ListNode* node)
+{
+	if (!node)
+	{
+		return NULL;
+	}
+
+	void* data = node->data;
+
+	node->data = NULL;
+	node->destructor = NULL;
+
+	return data;
 }
