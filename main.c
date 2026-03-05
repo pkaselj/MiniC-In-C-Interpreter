@@ -88,7 +88,7 @@ void PrintTokens(List* list)
 	ListNode* current = NULL;
 	while (current = list_iterator_advance(iter))
 	{
-		_PrintToken((Token*)list_node_data(current));
+		_PrintToken((Token*)list_node_data_get(current));
 	}
 }
 

@@ -106,7 +106,7 @@ struct AstNode
 		struct
 		{
 			struct AstNode* symbol;
-			struct AstNode* params;
+			List* params;
 			struct AstNode* block;
 		} fn_def;
 
@@ -121,13 +121,6 @@ struct AstNode
 
 typedef struct AstNode AstNode;
 
-struct AstTree
-{
-	AstNode* root;
-};
-
-typedef struct AstTree AstTree;
-
 // ---- Public functions
 
-AstTree* parser_perform(List* tokens);
+AstNode* parser_perform(List* tokens);
