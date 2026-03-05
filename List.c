@@ -188,20 +188,24 @@ NONOWNING ListNode* list_iterator_get(ListConstIterator* iter)
 
 NONOWNING ListNode* list_iterator_advance(ListConstIterator* iter)
 {
-	if (!iter)
+	if (!iter || !iter->current)
 	{
 		return NULL;
 	}
+
+	ListNode* current = iter->current;
 
 	if(!iter->current->next)
 	{
 		iter->current = NULL;
-		return NULL;
+	}
+	else
+	{
+		iter->current = iter->current->next;
+		iter->index++;
 	}
 
-	iter->current = iter->current->next;
-	iter->index++;
-	return iter->current;
+	return current;
 }
 
 size_t list_interator_index(ListConstIterator* iter)

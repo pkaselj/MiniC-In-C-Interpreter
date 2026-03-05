@@ -27,3 +27,16 @@ StringView sv_create_empty();
 void LogError(const char* format, ...);
 void LogInfo(const char* format, ...);
 void LogDebug(const char* format, ...);
+
+// -------------- Print Utils
+typedef struct List List;
+typedef struct AstNode AstNode;
+
+void PrintTokens(List* list);
+void PrintAst(AstNode* tree);
+
+typedef enum TokenType TokenType;
+typedef enum AstNodeType AstNodeType;
+
+const char* GetTokenTypeString(TokenType type);
+const char* GetAstNodeTypeString(AstNodeType type);

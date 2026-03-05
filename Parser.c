@@ -74,7 +74,13 @@ Token* _parser_expect(ListConstIterator* iter, TokenType required)
 	{
 		_token = _parser_peek(iter);
 		size_t index = list_interator_index(iter);
-		LogError("Parser: Token at index [%llu] - expected token of type [%d], got [%d]!\n", index, _token->type, required);
+		LogError("Parser: Token at index [%llu] - expected token of type [%d / %s], got [%d / %s]!\n", 
+			index, 
+			_token->type,
+			GetTokenTypeString(_token->type),
+			required,
+			GetTokenTypeString(required)
+		);
 		exit(-1);
 	}
 	return _token;
@@ -88,7 +94,11 @@ Token* _parser_expect_any(ListConstIterator* iter, const TokenType* required_arr
 	{
 		_token = _parser_peek(iter);
 		size_t index = list_interator_index(iter);
-		LogError("Parser: Token at index [%llu] - expected token of type [??], got [%d]!\n", index, _token->type); // TODO expected
+		LogError("Parser: Token at index [%llu] - expected token of type [??], got [%d / %s]!\n",
+			index,
+			_token->type,
+			GetTokenTypeString(_token->type)
+		); // TODO expected
 		exit(-1);
 	}
 	return _token;
@@ -790,7 +800,7 @@ AstNode* parse_fn_def(ListConstIterator* iter)
 		Token* param = _parser_expect(iter, TT_ID);
 		AstNode* param_node = ast_create_identifier(param->value.as_string);
 		list_push(params, list_create_node(param_node, ast_node_free));
-		_parser_expect(iter, TT_K_COMMA);
+		_parser_match(iter, TT_K_COMMA);
 	}
 	_parser_expect(iter, TT_C_PAREN);
 	AstNode* block = parse_block(iter);
@@ -818,7 +828,7 @@ AstNode* parse_program(ListConstIterator* iter)
 
 		assert(node);
 
-		list_push(fn_defs, list_create_node(node, ast_node_free));
+		list_push(statements, list_create_node(node, ast_node_free));
 	}
 
 	return ast_create_program(fn_defs, statements);
