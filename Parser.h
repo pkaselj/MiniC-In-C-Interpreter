@@ -47,7 +47,7 @@ struct AstNode
 		struct
 		{
 			struct AstNode* child;
-			TokenType Op;
+			TokenType op;
 		} unary_expr;
 
 		struct
@@ -64,7 +64,7 @@ struct AstNode
 
 		struct
 		{
-			float value;
+			double value;
 		} number;
 
 		struct
@@ -86,7 +86,7 @@ struct AstNode
 
 		struct
 		{
-			struct AstNode* intial;
+			struct AstNode* initial;
 			struct AstNode* end_condition;
 			struct AstNode* next_action;
 			struct AstNode* block;
@@ -105,9 +105,9 @@ struct AstNode
 
 		struct
 		{
-			struct AstNode* block;
-			struct AstNode* params;
 			struct AstNode* symbol;
+			struct AstNode* params;
+			struct AstNode* block;
 		} fn_def;
 
 		struct
