@@ -105,6 +105,7 @@
       <PreprocessorDefinitions>_DEBUG;_CONSOLE;%(PreprocessorDefinitions);_CRT_SECURE_NO_WARNINGS</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard_C>stdc11</LanguageStandard_C>
+      <AdditionalIncludeDirectories>./Includes</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -119,6 +120,7 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>NDEBUG;_CONSOLE;%(PreprocessorDefinitions);_CRT_SECURE_NO_WARNINGS</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
+      <AdditionalIncludeDirectories>./Includes</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -128,21 +130,21 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="Lexer.c" />
-    <ClCompile Include="List.c" />
-    <ClCompile Include="main.c" />
-    <ClCompile Include="Parser.c" />
-    <ClCompile Include="Utils.c" />
-  </ItemGroup>
-  <ItemGroup>
-    <ClInclude Include="Common.h" />
-    <ClInclude Include="List.h" />
-    <ClInclude Include="Parser.h" />
-    <ClInclude Include="Utils.h" />
-    <ClInclude Include="Lexer.h" />
-  </ItemGroup>
-  <ItemGroup>
     <None Include="README.md" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="Includes\Common.h" />
+    <ClInclude Include="Includes\Lexer.h" />
+    <ClInclude Include="Includes\List.h" />
+    <ClInclude Include="Includes\Parser.h" />
+    <ClInclude Include="Includes\Utils.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="Sources\Lexer.c" />
+    <ClCompile Include="Sources\List.c" />
+    <ClCompile Include="Sources\main.c" />
+    <ClCompile Include="Sources\Parser.c" />
+    <ClCompile Include="Sources\Utils.c" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

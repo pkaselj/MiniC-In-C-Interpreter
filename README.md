@@ -2,8 +2,6 @@
 ## General
 This project implements an interpreter for a simple toy language inspired by C - written in C without external libraries other than the standard library. The language is dynamically typed LL(1)*-ish* grammar interpreted by a recursive descent parser written in C.
 
---- TODO: update readme below after implementing interpreter, for more information see MiniC in Python
-
 It is still WIP and it currently implements the following features:
 - Arithmetic operations (`+ - * /`) (with proper operator precedence i.e. `2+3*4` parses as `2+(3*4)`)
 - Parentheses `3*(2+3)`
@@ -57,6 +55,84 @@ Currently implemented grammar EBNF:
 ```
 
 ## Examples
+
+### Lexing and Parsing output
+
+```
+Program input: 'function a(b, c, d){ b + c * d; } if(x) { y  = 4; } else { y = 5; }'
+
+[Token type=TT_K_FN length=8 data=]
+[Token type=TT_ID length=1 data=a]
+[Token type=TT_O_PAREN length=1 data=]
+[Token type=TT_ID length=1 data=b]
+[Token type=TT_K_COMMA length=1 data=]
+[Token type=TT_ID length=1 data=c]
+[Token type=TT_K_COMMA length=1 data=]
+[Token type=TT_ID length=1 data=d]
+[Token type=TT_C_PAREN length=1 data=]
+[Token type=TT_O_BRACE length=1 data=]
+[Token type=TT_ID length=1 data=b]
+[Token type=TT_OP_ADD length=1 data=]
+[Token type=TT_ID length=1 data=c]
+[Token type=TT_OP_MUL length=1 data=]
+[Token type=TT_ID length=1 data=d]
+[Token type=TT_DELIM length=1 data=]
+[Token type=TT_C_BRACE length=1 data=]
+[Token type=TT_K_IF length=2 data=]
+[Token type=TT_O_PAREN length=1 data=]
+[Token type=TT_ID length=1 data=x]
+[Token type=TT_C_PAREN length=1 data=]
+[Token type=TT_O_BRACE length=1 data=]
+[Token type=TT_ID length=1 data=y]
+[Token type=TT_ASSIGN length=1 data=]
+[Token type=TT_NUMBER length=1 data=4.000000]
+[Token type=TT_DELIM length=1 data=]
+[Token type=TT_C_BRACE length=1 data=]
+[Token type=TT_K_ELSE length=4 data=]
+[Token type=TT_O_BRACE length=1 data=]
+[Token type=TT_ID length=1 data=y]
+[Token type=TT_ASSIGN length=1 data=]
+[Token type=TT_NUMBER length=1 data=5.000000]
+[Token type=TT_DELIM length=1 data=]
+[Token type=TT_C_BRACE length=1 data=]
+
+AST_S
+ AST_FN_DEF_STMT
+.>AST_ID_EXPR
+.. a
+.>AST_ID_EXPR
+.. b
+.>AST_ID_EXPR
+.. c
+.>AST_ID_EXPR
+.. d
+.>AST_BLOCK_STMT
+.. AST_BINARY_EXPR
+...>AST_ID_EXPR
+.... b
+...>AST_BINARY_EXPR
+.... AST_ID_EXPR
+.....>c
+.... AST_ID_EXPR
+.....>d
+.... TT_OP_MUL
+...>TT_OP_ADD
+ AST_IF_STMT
+.>AST_ID_EXPR
+.. x
+.>AST_BLOCK_STMT
+.. AST_ASSIGN_EXPR
+...>AST_ID_EXPR
+.... y
+...>AST_NUM_EXPR
+.... 4.000000
+.>AST_BLOCK_STMT
+.. AST_ASSIGN_EXPR
+...>AST_ID_EXPR
+.... y
+...>AST_NUM_EXPR
+.... 5.000000
+```
 
 ### Interactive / REPL Example (from Python example)
 
