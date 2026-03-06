@@ -6,21 +6,21 @@
 
 // ---- token list manipulation
 
-NONOWNING Token* _parser_peek(ListConstIterator* iter)
+static NONOWNING Token* _parser_peek(ListConstIterator* iter)
 {
 	assert(iter);
 
 	return list_node_data_get(list_iterator_get(iter));
 }
 
-Token* _parser_advance(ListConstIterator* iter)
+static Token* _parser_advance(ListConstIterator* iter)
 {
 	assert(iter);
 
 	return list_node_data_get(list_iterator_advance(iter));
 }
 
-Token* _parser_match(ListConstIterator* iter, TokenType required)
+static Token* _parser_match(ListConstIterator* iter, TokenType required)
 {
 	assert(iter);
 
@@ -41,7 +41,7 @@ Token* _parser_match(ListConstIterator* iter, TokenType required)
 	return NULL;
 }
 
-Token* _parser_match_any(ListConstIterator* iter, const TokenType* required_array, size_t items)
+static Token* _parser_match_any(ListConstIterator* iter, const TokenType* required_array, size_t items)
 {
 	assert(iter);
 	assert(required_array);
@@ -66,7 +66,7 @@ Token* _parser_match_any(ListConstIterator* iter, const TokenType* required_arra
 	return NULL;
 }
 
-Token* _parser_expect(ListConstIterator* iter, TokenType required)
+static Token* _parser_expect(ListConstIterator* iter, TokenType required)
 {
 	// TODO: track index and handle errors better.
 	Token* _token = _parser_match(iter, required);
@@ -86,7 +86,7 @@ Token* _parser_expect(ListConstIterator* iter, TokenType required)
 	return _token;
 }
 
-Token* _parser_expect_any(ListConstIterator* iter, const TokenType* required_array, size_t items)
+static Token* _parser_expect_any(ListConstIterator* iter, const TokenType* required_array, size_t items)
 {
 	// TODO: track index and handle errors better.
 	Token* _token = _parser_match_any(iter, required_array, items);
@@ -107,7 +107,7 @@ Token* _parser_expect_any(ListConstIterator* iter, const TokenType* required_arr
 
 // ---- private AST functions / CREATE
 
-AstNode* _ast_create_empty()
+static AstNode* _ast_create_empty()
 {
 	AstNode* node = (AstNode*)malloc(sizeof(AstNode));
 	assert(node);
@@ -116,7 +116,7 @@ AstNode* _ast_create_empty()
 	return node;
 }
 
-AstNode* ast_create_fn_call(TRANSFER AstNode* symbol, TRANSFER List* args)
+static AstNode* ast_create_fn_call(TRANSFER AstNode* symbol, TRANSFER List* args)
 {
 	AstNode* node = _ast_create_empty();
 	node->type = AST_FN_CALL_EXPR;
@@ -125,7 +125,7 @@ AstNode* ast_create_fn_call(TRANSFER AstNode* symbol, TRANSFER List* args)
 	return node;
 }
 
-AstNode* ast_create_assign(TRANSFER AstNode* left, TRANSFER AstNode* right)
+static AstNode* ast_create_assign(TRANSFER AstNode* left, TRANSFER AstNode* right)
 {
 	AstNode* node = _ast_create_empty();
 	node->type = AST_ASSIGN_EXPR;
@@ -134,7 +134,7 @@ AstNode* ast_create_assign(TRANSFER AstNode* left, TRANSFER AstNode* right)
 	return node;
 }
 
-AstNode* ast_create_unary_expr(TRANSFER AstNode* child, TokenType op)
+static AstNode* ast_create_unary_expr(TRANSFER AstNode* child, TokenType op)
 {
 	AstNode* node = _ast_create_empty();
 	node->type = AST_UNARY_EXPR;
@@ -143,7 +143,7 @@ AstNode* ast_create_unary_expr(TRANSFER AstNode* child, TokenType op)
 	return node;
 }
 
-AstNode* ast_create_binary_expr(TRANSFER AstNode* left, TRANSFER AstNode* right, TokenType op)
+static AstNode* ast_create_binary_expr(TRANSFER AstNode* left, TRANSFER AstNode* right, TokenType op)
 {
 	AstNode* node = _ast_create_empty();
 	node->type = AST_BINARY_EXPR;
@@ -153,7 +153,7 @@ AstNode* ast_create_binary_expr(TRANSFER AstNode* left, TRANSFER AstNode* right,
 	return node;
 }
 
-AstNode* ast_create_identifier(StringView value)
+static AstNode* ast_create_identifier(StringView value)
 {
 	AstNode* node = _ast_create_empty();
 	node->type = AST_ID_EXPR;
@@ -166,7 +166,7 @@ AstNode* ast_create_identifier(StringView value)
 	return node;
 }
 
-AstNode* ast_create_number(double value)
+static AstNode* ast_create_number(double value)
 {
 	AstNode* node = _ast_create_empty();
 	node->type = AST_NUM_EXPR;
@@ -174,7 +174,7 @@ AstNode* ast_create_number(double value)
 	return node;
 }
 
-AstNode* ast_create_string(StringView value)
+static AstNode* ast_create_string(StringView value)
 {
 	AstNode* node = _ast_create_empty();
 	node->type = AST_STR_EXPR;
@@ -187,7 +187,7 @@ AstNode* ast_create_string(StringView value)
 	return node;
 }
 
-AstNode* ast_create_expr_stmt(TRANSFER AstNode* expression)
+static AstNode* ast_create_expr_stmt(TRANSFER AstNode* expression)
 {
 	AstNode* node = _ast_create_empty();
 	node->type = AST_EXPR_STMT;
@@ -195,7 +195,7 @@ AstNode* ast_create_expr_stmt(TRANSFER AstNode* expression)
 	return node;
 }
 
-AstNode* ast_create_if_stmt(
+static AstNode* ast_create_if_stmt(
 	TRANSFER AstNode* condition,
 	TRANSFER AstNode* block_if,
 	TRANSFER AstNode* block_else)
@@ -208,7 +208,7 @@ AstNode* ast_create_if_stmt(
 	return node;
 }
 
-AstNode* ast_create_for_stmt(
+static AstNode* ast_create_for_stmt(
 	TRANSFER AstNode* initial,
 	TRANSFER AstNode* end_condition,
 	TRANSFER AstNode* next_action,
@@ -223,7 +223,7 @@ AstNode* ast_create_for_stmt(
 	return node;
 }
 
-AstNode* ast_create_while_stmt(TRANSFER AstNode* condition,	TRANSFER AstNode* block)
+static AstNode* ast_create_while_stmt(TRANSFER AstNode* condition,	TRANSFER AstNode* block)
 {
 	AstNode* node = _ast_create_empty();
 	node->type = AST_WHILE_STMT;
@@ -232,7 +232,7 @@ AstNode* ast_create_while_stmt(TRANSFER AstNode* condition,	TRANSFER AstNode* bl
 	return node;
 }
 
-AstNode* ast_create_block(TRANSFER List* statements)
+static AstNode* ast_create_block(TRANSFER List* statements)
 {
 	AstNode* node = _ast_create_empty();
 	node->type = AST_BLOCK_STMT;
@@ -240,7 +240,7 @@ AstNode* ast_create_block(TRANSFER List* statements)
 	return node;
 }
 
-AstNode* ast_create_fn_def(
+static AstNode* ast_create_fn_def(
 	TRANSFER AstNode* symbol,
 	TRANSFER List* params,
 	TRANSFER AstNode* block)
@@ -253,7 +253,7 @@ AstNode* ast_create_fn_def(
 	return node;
 }
 
-AstNode* ast_create_program(TRANSFER List* fn_defs, TRANSFER List* statements)
+static AstNode* ast_create_program(TRANSFER List* fn_defs, TRANSFER List* statements)
 {
 	AstNode* node = _ast_create_empty();
 	node->type = AST_S;
@@ -265,9 +265,9 @@ AstNode* ast_create_program(TRANSFER List* fn_defs, TRANSFER List* statements)
 // ---- private AST functions / FREE
 
 // Forward def
-void ast_node_free(AstNode* node);
+static void ast_node_free(AstNode* node);
 
-void _ast_fn_call_free(AstNode* node)
+static void _ast_fn_call_free(AstNode* node)
 {
 	assert(node);
 	assert(node->type == AST_FN_CALL_EXPR);
@@ -281,7 +281,7 @@ void _ast_fn_call_free(AstNode* node)
 	free(node);
 }
 
-void _ast_assign_free(AstNode* node)
+static void _ast_assign_free(AstNode* node)
 {
 	assert(node);
 	assert(node->type == AST_ASSIGN_EXPR);
@@ -295,7 +295,7 @@ void _ast_assign_free(AstNode* node)
 	free(node);
 }
 
-void _ast_unary_expr_free(AstNode* node)
+static void _ast_unary_expr_free(AstNode* node)
 {
 	assert(node);
 	assert(node->type == AST_UNARY_EXPR);
@@ -306,7 +306,7 @@ void _ast_unary_expr_free(AstNode* node)
 	free(node);
 }
 
-void _ast_binary_expr_free(AstNode* node)
+static void _ast_binary_expr_free(AstNode* node)
 {
 	assert(node);
 	assert(node->type == AST_BINARY_EXPR);
@@ -321,7 +321,7 @@ void _ast_binary_expr_free(AstNode* node)
 }
 
 
-void _ast_identifier_free(AstNode* node)
+static void _ast_identifier_free(AstNode* node)
 {
 	assert(node);
 	assert(node->type == AST_ID_EXPR);
@@ -334,7 +334,7 @@ void _ast_identifier_free(AstNode* node)
 	free(node);
 }
 
-void _ast_string_free(AstNode* node)
+static void _ast_string_free(AstNode* node)
 {
 	assert(node);
 	assert(node->type == AST_STR_EXPR);
@@ -347,7 +347,7 @@ void _ast_string_free(AstNode* node)
 	free(node);
 }
 
-void _ast_expr_stmt_free(AstNode* node)
+static void _ast_expr_stmt_free(AstNode* node)
 {
 	assert(node);
 	assert(node->type == AST_EXPR_STMT);
@@ -358,7 +358,7 @@ void _ast_expr_stmt_free(AstNode* node)
 	free(node);
 }
 
-void _ast_if_stmt_free(AstNode* node)
+static void _ast_if_stmt_free(AstNode* node)
 {
 	assert(node);
 	assert(node->type == AST_IF_STMT);
@@ -375,7 +375,7 @@ void _ast_if_stmt_free(AstNode* node)
 	free(node);
 }
 
-void _ast_for_stmt_free(AstNode* node)
+static void _ast_for_stmt_free(AstNode* node)
 {
 	assert(node);
 	assert(node->type == AST_FOR_STMT);
@@ -395,7 +395,7 @@ void _ast_for_stmt_free(AstNode* node)
 	free(node);
 }
 
-void _ast_while_stmt_free(AstNode* node)
+static void _ast_while_stmt_free(AstNode* node)
 {
 	assert(node);
 	assert(node->type == AST_WHILE_STMT);
@@ -409,7 +409,7 @@ void _ast_while_stmt_free(AstNode* node)
 	free(node);
 }
 
-void _ast_block_free(AstNode* node)
+static void _ast_block_free(AstNode* node)
 {
 	assert(node);
 	assert(node->type == AST_BLOCK_STMT);
@@ -420,7 +420,7 @@ void _ast_block_free(AstNode* node)
 	free(node);
 }
 
-void _ast_fn_definition_free(AstNode* node)
+static void _ast_fn_definition_free(AstNode* node)
 {
 	assert(node);
 	assert(node->type == AST_FN_DEF_STMT);
@@ -437,7 +437,7 @@ void _ast_fn_definition_free(AstNode* node)
 	free(node);
 }
 
-void _ast_program_free(AstNode* node)
+static void _ast_program_free(AstNode* node)
 {
 	assert(node);
 	assert(node->type == AST_S);
@@ -451,7 +451,7 @@ void _ast_program_free(AstNode* node)
 	free(node);
 }
 
-void ast_node_free(AstNode* node)
+static void ast_node_free(AstNode* node)
 {
 	if (!node)
 		return;
@@ -511,27 +511,27 @@ void ast_node_free(AstNode* node)
 
 // Declarations
 
-AstNode* parse_primary(ListConstIterator* iter);
-AstNode* parse_fn_call(ListConstIterator* iter);
-AstNode* parse_unary(ListConstIterator* iter);
-AstNode* parse_term(ListConstIterator* iter);
-AstNode* parse_additive(ListConstIterator* iter);
-AstNode* parse_comparee(ListConstIterator* iter);
-AstNode* parse_logical_AND(ListConstIterator* iter);
-AstNode* parse_logical_OR(ListConstIterator* iter);
-AstNode* parse_assignee(ListConstIterator* iter);
-AstNode* parse_expression(ListConstIterator* iter);
-AstNode* parse_block(ListConstIterator* iter);
-AstNode* parse_for_stmt(ListConstIterator* iter);
-AstNode* parse_while_stmt(ListConstIterator* iter);
-AstNode* parse_if_stmt(ListConstIterator* iter);
-AstNode* parse_statement(ListConstIterator* iter);
-AstNode* parse_fn_def(ListConstIterator* iter);
-AstNode* parse_program(ListConstIterator* iter);
+static AstNode* parse_primary(ListConstIterator* iter);
+static AstNode* parse_fn_call(ListConstIterator* iter);
+static AstNode* parse_unary(ListConstIterator* iter);
+static AstNode* parse_term(ListConstIterator* iter);
+static AstNode* parse_additive(ListConstIterator* iter);
+static AstNode* parse_comparee(ListConstIterator* iter);
+static AstNode* parse_logical_AND(ListConstIterator* iter);
+static AstNode* parse_logical_OR(ListConstIterator* iter);
+static AstNode* parse_assignee(ListConstIterator* iter);
+static AstNode* parse_expression(ListConstIterator* iter);
+static AstNode* parse_block(ListConstIterator* iter);
+static AstNode* parse_for_stmt(ListConstIterator* iter);
+static AstNode* parse_while_stmt(ListConstIterator* iter);
+static AstNode* parse_if_stmt(ListConstIterator* iter);
+static AstNode* parse_statement(ListConstIterator* iter);
+static AstNode* parse_fn_def(ListConstIterator* iter);
+static AstNode* parse_program(ListConstIterator* iter);
 
 // Definitions
 
-AstNode* parse_primary(ListConstIterator* iter)
+static AstNode* parse_primary(ListConstIterator* iter)
 {
 	Token* token;
 
@@ -555,7 +555,7 @@ AstNode* parse_primary(ListConstIterator* iter)
 	return expr;
 }
 
-AstNode* parse_fn_call(ListConstIterator* iter)
+static AstNode* parse_fn_call(ListConstIterator* iter)
 {
 	AstNode* node = parse_primary(iter);
 	Token* nt = NULL;
@@ -580,7 +580,7 @@ AstNode* parse_fn_call(ListConstIterator* iter)
 	return node;
 }
 
-AstNode* parse_unary(ListConstIterator* iter)
+static AstNode* parse_unary(ListConstIterator* iter)
 {
 	Token* token;
 	const TokenType required[] = { TT_OP_ADD, TT_OP_SUB, TT_OP_NOT };
@@ -594,7 +594,7 @@ AstNode* parse_unary(ListConstIterator* iter)
 	return parse_fn_call(iter);
 }
 
-AstNode* parse_term(ListConstIterator* iter)
+static AstNode* parse_term(ListConstIterator* iter)
 {
 	AstNode* node = parse_unary(iter);
 	Token* token;
@@ -609,7 +609,7 @@ AstNode* parse_term(ListConstIterator* iter)
 	return node;
 }
 
-AstNode* parse_additive(ListConstIterator* iter)
+static AstNode* parse_additive(ListConstIterator* iter)
 {
 	AstNode* node = parse_term(iter);
 	Token* token;
@@ -624,7 +624,7 @@ AstNode* parse_additive(ListConstIterator* iter)
 	return node;
 }
 
-AstNode* parse_comparee(ListConstIterator* iter)
+static AstNode* parse_comparee(ListConstIterator* iter)
 {
 	AstNode* node = parse_additive(iter);
 	Token* token;
@@ -646,7 +646,7 @@ AstNode* parse_comparee(ListConstIterator* iter)
 	return node;
 }
 
-AstNode* parse_logical_AND(ListConstIterator* iter)
+static AstNode* parse_logical_AND(ListConstIterator* iter)
 {
 	AstNode* node = parse_comparee(iter);
 	Token* token;
@@ -661,7 +661,7 @@ AstNode* parse_logical_AND(ListConstIterator* iter)
 	return node;
 }
 
-AstNode* parse_logical_OR(ListConstIterator* iter)
+static AstNode* parse_logical_OR(ListConstIterator* iter)
 {
 	AstNode* node = parse_logical_AND(iter);
 	Token* token;
@@ -676,12 +676,12 @@ AstNode* parse_logical_OR(ListConstIterator* iter)
 	return node;
 }
 
-AstNode* parse_assignee(ListConstIterator* iter)
+static AstNode* parse_assignee(ListConstIterator* iter)
 {
 	return parse_logical_OR(iter);
 }
 
-AstNode* parse_expression(ListConstIterator* iter)
+static AstNode* parse_expression(ListConstIterator* iter)
 {
 	AstNode* node = parse_assignee(iter);
 
@@ -695,7 +695,7 @@ AstNode* parse_expression(ListConstIterator* iter)
 	return node;
 }
 
-AstNode* parse_block(ListConstIterator* iter)
+static AstNode* parse_block(ListConstIterator* iter)
 {
 	List* statements = list_create();
 
@@ -709,7 +709,7 @@ AstNode* parse_block(ListConstIterator* iter)
 	return ast_create_block(statements);
 }
 
-AstNode* parse_for_stmt(ListConstIterator* iter)
+static AstNode* parse_for_stmt(ListConstIterator* iter)
 {
 	AstNode* initial = NULL;
 	AstNode* end_cond = NULL;
@@ -740,7 +740,7 @@ AstNode* parse_for_stmt(ListConstIterator* iter)
 	return ast_create_for_stmt(initial, end_cond, next_action, block);
 }
 
-AstNode* parse_while_stmt(ListConstIterator* iter)
+static AstNode* parse_while_stmt(ListConstIterator* iter)
 {
 	_parser_expect(iter, TT_K_WHILE);
 	_parser_expect(iter, TT_O_PAREN);
@@ -751,7 +751,7 @@ AstNode* parse_while_stmt(ListConstIterator* iter)
 	return ast_create_while_stmt(cond, block);
 }
 
-AstNode* parse_if_stmt(ListConstIterator* iter)
+static AstNode* parse_if_stmt(ListConstIterator* iter)
 {
 	_parser_expect(iter, TT_K_IF);
 	_parser_expect(iter, TT_O_PAREN);
@@ -767,7 +767,7 @@ AstNode* parse_if_stmt(ListConstIterator* iter)
 	return ast_create_if_stmt(cond, block_if, block_else);
 }
 
-AstNode* parse_statement(ListConstIterator* iter)
+static AstNode* parse_statement(ListConstIterator* iter)
 {
 	Token* token = _parser_peek(iter);
 	if (!token)
@@ -787,7 +787,7 @@ AstNode* parse_statement(ListConstIterator* iter)
 	return expr;
 }
 
-AstNode* parse_fn_def(ListConstIterator* iter)
+static AstNode* parse_fn_def(ListConstIterator* iter)
 {
 	_parser_expect(iter, TT_K_FN);
 	Token* symbol = _parser_expect(iter, TT_ID);
@@ -807,7 +807,7 @@ AstNode* parse_fn_def(ListConstIterator* iter)
 	return ast_create_fn_def(sym_node, params, block);
 }
 
-AstNode* parse_program(ListConstIterator* iter)
+static AstNode* parse_program(ListConstIterator* iter)
 {
 	List* statements = list_create(); // List<AstNode*>
 	List* fn_defs = list_create(); // List<AstNode*>
