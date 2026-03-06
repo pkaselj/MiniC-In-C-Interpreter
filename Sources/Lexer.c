@@ -1,6 +1,6 @@
-#include "Lexer.h"
-#include "Utils.h"
-#include "List.h"
+#include <Lexer.h>
+#include <Utils.h>
+#include <List.h>
 
 #include <string.h>
 #include <stdlib.h>

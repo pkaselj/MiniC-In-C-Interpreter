@@ -1,9 +1,9 @@
 #include <stdio.h>
 #include <string.h>
 
-#include "Lexer.h"
-#include "Parser.h"
-#include "List.h"
+#include <Lexer.h>
+#include <Parser.h>
+#include <List.h>
 
 
 int main(int argc, char* argv[])

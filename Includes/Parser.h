@@ -1,8 +1,8 @@
 #pragma once
 
 #include <stddef.h>
-#include "List.h"
-#include "Lexer.h"
+#include <List.h>
+#include <Lexer.h>
 
 // --- Types
 

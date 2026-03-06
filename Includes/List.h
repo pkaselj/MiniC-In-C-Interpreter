@@ -1,6 +1,6 @@
 #pragma once
 
-#include "Common.h"
+#include <Common.h>
 
 typedef void (*ListNodeDestructor)(void*);
 typedef struct ListNode ListNode;
