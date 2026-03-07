@@ -134,6 +134,34 @@ AST_S
 .... 5.000000
 ```
 
+```
+Program input: '3*5+15-2;'
+[Token type=TT_NUMBER length=1 data=3.000000]
+[Token type=TT_OP_MUL length=1 data=]
+[Token type=TT_NUMBER length=1 data=5.000000]
+[Token type=TT_OP_ADD length=1 data=]
+[Token type=TT_NUMBER length=2 data=15.000000]
+[Token type=TT_OP_SUB length=1 data=]
+[Token type=TT_NUMBER length=1 data=2.000000]
+[Token type=TT_DELIM length=1 data=]
+AST_S
+ AST_BINARY_EXPR
+.>AST_BINARY_EXPR
+.. AST_BINARY_EXPR
+...>AST_NUM_EXPR
+.... 3.000000
+...>AST_NUM_EXPR
+.... 5.000000
+...>TT_OP_MUL
+.. AST_NUM_EXPR
+...>15.000000
+.. TT_OP_ADD
+.>AST_NUM_EXPR
+.. 2.000000
+.>TT_OP_SUB
+[VT_NUMBER]=28.000000
+```
+
 ### Interactive / REPL Example (from Python example)
 
 ```
@@ -226,3 +254,4 @@ Implement in future:
 - [x] File execution
 - [ ] Function validation pass - referencing non-existing symbols
 - [ ] Scientific notation numbers
+- [ ] owned String destructor
