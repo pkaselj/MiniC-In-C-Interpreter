@@ -11,7 +11,12 @@ struct StringView
 	size_t size;
 };
 
+// Non-owning string
 typedef struct StringView StringView;
+// Owning string (same type as non-owning, just an 
+// annotation to the user that data should be freed)
+typedef struct StringView String;
+// TODO: sv_free(String sv);
 
 StringView sv_create(const char* data);
 StringView sv_create_s(const char* data, size_t length);
@@ -31,12 +36,16 @@ void LogDebug(const char* format, ...);
 // -------------- Print Utils
 typedef struct List List;
 typedef struct AstNode AstNode;
+typedef struct Value Value;
 
 void PrintTokens(List* list);
 void PrintAst(AstNode* tree);
+void PrintValue(Value* value);
 
 typedef enum TokenType TokenType;
 typedef enum AstNodeType AstNodeType;
+typedef enum ValueType ValueType;
 
 const char* GetTokenTypeString(TokenType type);
 const char* GetAstNodeTypeString(AstNodeType type);
+const char* GetValueTypeString(ValueType type);

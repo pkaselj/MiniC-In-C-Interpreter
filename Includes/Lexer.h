@@ -51,7 +51,7 @@ struct Token
 
     union
     {
-        StringView as_string;
+        String as_string;
         double as_number;
     } value;
 

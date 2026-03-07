@@ -59,7 +59,7 @@ struct AstNode
 
 		struct
 		{
-			StringView value;
+			String value;
 		} identifier;
 
 		struct
@@ -69,7 +69,7 @@ struct AstNode
 
 		struct
 		{
-			StringView value;
+			String value;
 		} string;
 
 		struct

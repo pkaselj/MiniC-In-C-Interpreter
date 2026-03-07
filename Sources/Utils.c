@@ -1,6 +1,8 @@
 #include <Utils.h>
 #include <Lexer.h>
 #include <Parser.h>
+#include <Interpreter.h>
+#include <Value.h>
 
 #include <stdarg.h>
 #include <stdio.h>
@@ -359,4 +361,31 @@ void PrintAst(AstNode* node)
 	}
 
 	_PrintAstNode(0, node);
+}
+
+// -----------------------------------------------------
+
+const char* GetValueTypeString(ValueType type)
+{
+	switch (type)
+	{
+	case VT_NUMBER: return "VT_NUMBER";
+	case VT_STRING: return "VT_STRING";
+	case VT_BOOL:	return "VT_BOOL";
+	case VT_NONE:	return "VT_NONE";
+	default:		return "UNKNOWN";
+	}
+}
+
+void PrintValue(Value* value)
+{
+	printf("[%s]=", GetValueTypeString(value->type));
+	switch (value->type)
+	{
+	case VT_NUMBER: printf("%lf\n", value->as._number); break;
+	case VT_STRING: printf("%s\n", value->as._string.data); break;
+	case VT_BOOL:	printf("%s\n", (value->as._bool) ? "TRUE" : "FALSE"); break;
+	case VT_NONE:	printf("<NONE>\n"); break;
+	default:		printf("<UNKNOWN>\n"); break;
+	}
 }
