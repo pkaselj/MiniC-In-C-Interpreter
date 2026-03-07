@@ -126,12 +126,12 @@ void LogDebug(const char* format, ...)
 	va_end(args);
 #else
 	(void)format;
-#endif;
+#endif
 }
 
 // -----------------------
 
-const char* GetTokenTypeString(TokenType type)
+const char* GetTokenTypeString(enum TokenType type)
 {
 	switch (type)
 	{
@@ -181,7 +181,8 @@ void _GetTokenDataString(Token* token, char* buffer, size_t size)
 		break;
 	case TT_STRING:
 	case TT_ID:
-		strncpy_s(buffer, size, token->value.as_string.data, token->value.as_string.size);
+		memset(buffer, 0, size);
+		memcpy(buffer, token->value.as_string.data, token->value.as_string.size);
 		break;
 	}
 }
@@ -200,7 +201,7 @@ void _PrintToken(Token* token)
 	char data[256];
 	_GetTokenDataString(token, data, sizeof(data));
 
-	printf("[Token type=%s length=%llu data=%s]\n", token_type, length, data);
+	printf("[Token type=%s length=%lu data=%s]\n", token_type, length, data);
 }
 
 void PrintTokens(List* list)
@@ -222,7 +223,7 @@ void PrintTokens(List* list)
 
 // -----------------------
 
-const char* GetAstNodeTypeString(AstNodeType type)
+const char* GetAstNodeTypeString(enum AstNodeType type)
 {
 	switch (type)
 	{
@@ -245,7 +246,7 @@ const char* GetAstNodeTypeString(AstNodeType type)
 	}
 }
 
-inline void _PrintIndented(int indent, const char* format, ...)
+void _PrintIndented(int indent, const char* format, ...)
 {
 	if (indent > 0)
 	{
@@ -367,7 +368,7 @@ void PrintAst(AstNode* node)
 
 // -----------------------------------------------------
 
-const char* GetValueTypeString(ValueType type)
+const char* GetValueTypeString(enum ValueType type)
 {
 	switch (type)
 	{

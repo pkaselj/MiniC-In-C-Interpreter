@@ -30,7 +30,13 @@ Value operator_impl_unary(TokenType op, Value value)
 		}
 	}
 	
-
+	LogError("operator_impl_unary() - No implementation for operator [%d / %s] and [%d / %s]\n",
+		op,
+		GetTokenTypeString(op),
+		value.type,
+		GetValueTypeString(value.type)
+	);
+	exit(-1);
 }
 
 Value operator_impl_binary(TokenType op, Value left, Value right)
@@ -69,7 +75,7 @@ Value operator_impl_binary(TokenType op, Value left, Value right)
 		}
 	}
 
-	LogError("operator_impl_unary() - No implementation for operator [%d / %s] and left [%d / %s], right [%d / %s]\n",
+	LogError("operator_impl_binary() - No implementation for operator [%d / %s] and left [%d / %s], right [%d / %s]\n",
 		op,
 		GetTokenTypeString(op),
 		left.type,

@@ -3,7 +3,7 @@
 #include <Utils.h>
 #include <stdbool.h>
 
-typedef enum
+typedef enum ValueType
 {
 	VT_NUMBER,
 	VT_STRING,

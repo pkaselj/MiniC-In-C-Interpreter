@@ -6,7 +6,7 @@
 
 // --- Types
 
-typedef enum
+typedef enum AstNodeType
 {
 	AST_S = 0,
 
