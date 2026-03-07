@@ -206,10 +206,12 @@ static Value _interpret_block(ProgramState* state, AstNode* stmt)
 	ListNode* node = NULL;
 	Value last_value = value_create_empty();
 
-	while (node = list_iterator_advance(iter))
+	while ((node = list_iterator_advance(iter)))
 	{
 		last_value = _interpret_statement(state, list_node_data_get(node));
 	}
+
+	list_free_iterator(iter);
 
 	return last_value;
 }
@@ -256,10 +258,11 @@ static Value _interpret_program(ProgramState* state, AstNode* program)
 	{
 		ListConstIterator* iter = list_create_iterator(program->u.program.function_definitions);
 		ListNode* node = NULL;
-		while (node = list_iterator_advance(iter))
+		while ((node = list_iterator_advance(iter)))
 		{
 			_interpret_fn_def(state, list_node_data_get(node));
 		}
+		list_free_iterator(iter);
 	}
 
 	Value last_value;
@@ -267,10 +270,11 @@ static Value _interpret_program(ProgramState* state, AstNode* program)
 	{
 		ListConstIterator* iter = list_create_iterator(program->u.program.statements);
 		ListNode* node = NULL;
-		while (node = list_iterator_advance(iter))
+		while ((node = list_iterator_advance(iter)))
 		{
 			last_value = _interpret_statement(state, list_node_data_get(node));
 		}
+		list_free_iterator(iter);
 	}
 
 	return last_value;

@@ -213,10 +213,11 @@ void PrintTokens(List* list)
 
 	ListConstIterator* iter = list_create_iterator(list);
 	ListNode* current = NULL;
-	while (current = list_iterator_advance(iter))
+	while ((current = list_iterator_advance(iter)))
 	{
 		_PrintToken((Token*)list_node_data_get(current));
 	}
+	list_free_iterator(iter);
 }
 
 // -----------------------
@@ -275,10 +276,11 @@ void _PrintAstList(int indent, List* nodes)
 {
 	ListConstIterator* iter = list_create_iterator(nodes);
 	ListNode* node = NULL;
-	while (node = list_iterator_advance(iter))
+	while ((node = list_iterator_advance(iter)))
 	{
 		_PrintAstNode(indent, list_node_data_get(node));
 	}
+	list_free_iterator(iter);
 }
 
 void _PrintAstNode(int indent, AstNode* node)

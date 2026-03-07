@@ -600,7 +600,7 @@ static AstNode* parse_term(ListConstIterator* iter)
 	Token* token;
 	const TokenType required[] = { TT_OP_MUL, TT_OP_DIV };
 
-	while (token = _parser_match_any(iter, required, sizeof(required) / sizeof(required[0])))
+	while ((token = _parser_match_any(iter, required, sizeof(required) / sizeof(required[0]))))
 	{
 		AstNode* right = parse_unary(iter);
 		node = ast_create_binary_expr(node, right, token->type);
@@ -615,7 +615,7 @@ static AstNode* parse_additive(ListConstIterator* iter)
 	Token* token;
 	const TokenType required[] = { TT_OP_ADD, TT_OP_SUB };
 
-	while (token = _parser_match_any(iter, required, sizeof(required) / sizeof(required[0])))
+	while ((token = _parser_match_any(iter, required, sizeof(required) / sizeof(required[0]))))
 	{
 		AstNode* right = parse_term(iter);
 		node = ast_create_binary_expr(node, right, token->type);
@@ -637,7 +637,7 @@ static AstNode* parse_comparee(ListConstIterator* iter)
 		TT_OP_LTE
 	};
 
-	while (token = _parser_match_any(iter, required, sizeof(required) / sizeof(required[0])))
+	while ((token = _parser_match_any(iter, required, sizeof(required) / sizeof(required[0]))))
 	{
 		AstNode* right = parse_additive(iter);
 		node = ast_create_binary_expr(node, right, token->type);
@@ -822,7 +822,7 @@ static AstNode* parse_program(ListConstIterator* iter)
 
 		list_push(fn_defs, list_create_node(node, ast_node_free));
 	}
-	while (token = _parser_peek(iter))
+	while ((token = _parser_peek(iter)))
 	{
 		AstNode* node = parse_statement(iter);
 
