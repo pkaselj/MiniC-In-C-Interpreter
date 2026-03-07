@@ -21,5 +21,8 @@ int main(int argc, char* argv[])
 
 	interpreter_perform(NULL, tree);
 
+	ast_tree_free(tree);
+	list_free(tokens);
+
 	return 0;
 }

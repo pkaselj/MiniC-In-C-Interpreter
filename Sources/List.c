@@ -42,6 +42,8 @@ void list_free(TRANSFER List* list)
 
 	list->first = NULL;
 	list->last = NULL;
+
+	free(list);
 }
 
 ListNode* list_pop(List* list)

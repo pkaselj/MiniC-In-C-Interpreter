@@ -836,8 +836,16 @@ static AstNode* parse_program(ListConstIterator* iter)
 
 // ---- public api
 
+void ast_tree_free(AstNode* tree)
+{
+	ast_node_free(tree);
+}
+
 AstNode* parser_perform(List* tokens)
 {
 	ListConstIterator* iter = list_create_iterator(tokens);
-	return parse_program(iter);
+	AstNode* program = parse_program(iter);
+	list_free_iterator(iter);
+
+	return program;
 }

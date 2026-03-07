@@ -222,6 +222,149 @@ Error: Could not assign to node of type: [<class 'lib.common_defs.BinaryExpressi
 2.0
 ```
 
+### Valgrind Results
+
+```
+valgrind --leak-check=full --show-leak-kinds=all \
+                --track-origins=yes --verbose ./program
+==890== Memcheck, a memory error detector
+==890== Copyright (C) 2002-2022, and GNU GPL'd, by Julian Seward et al.
+==890== Using Valgrind-3.22.0-bd4db67b1d-20231031 and LibVEX; rerun with -h for copyright info
+==890== Command: ./program
+==890==
+--890-- Valgrind options:
+--890--    --leak-check=full
+--890--    --show-leak-kinds=all
+--890--    --track-origins=yes
+--890--    --verbose
+--890-- Contents of /proc/version:
+--890--   Linux version 6.6.87.2-microsoft-standard-WSL2 (root@439a258ad544) (gcc (GCC) 11.2.0, GNU ld (GNU Binutils) 2.37) #1 SMP PREEMPT_DYNAMIC Thu Jun  5 18:30:46 UTC 2025
+--890--
+--890-- Arch and hwcaps: AMD64, LittleEndian, amd64-cx16-lzcnt-rdtscp-sse3-ssse3-avx-avx2-bmi-f16c-rdrand-rdseed
+--890-- Page sizes: currently 4096, max supported 4096
+--890-- Valgrind library directory: /usr/libexec/valgrind
+--890-- Reading syms from /mnt/s/TEMP/MiniC-Interpreter-C/program
+--890-- Reading syms from /usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2
+--890--   Considering /usr/lib/debug/.build-id/52/0e05878220fb2fc6d28ff46b63b3fd5d48e763.debug ..
+--890--   .. build-id is valid
+--890-- Reading syms from /usr/libexec/valgrind/memcheck-amd64-linux
+--890--    object doesn't have a dynamic symbol table
+--890-- Scheduler: using generic scheduler lock implementation.
+--890-- Reading suppressions file: /usr/libexec/valgrind/default.supp
+==890== embedded gdbserver: reading from /tmp/vgdb-pipe-from-vgdb-to-890-by-kaso-on-???
+==890== embedded gdbserver: writing to   /tmp/vgdb-pipe-to-vgdb-from-890-by-kaso-on-???
+==890== embedded gdbserver: shared mem   /tmp/vgdb-pipe-shared-mem-vgdb-890-by-kaso-on-???
+==890==
+==890== TO CONTROL THIS PROCESS USING vgdb (which you probably
+==890== don't want to do, unless you know exactly what you're doing,
+==890== or are doing some strange experiment):
+==890==   /usr/bin/vgdb --pid=890 ...command...
+==890==
+==890== TO DEBUG THIS PROCESS USING GDB: start GDB like this
+==890==   /path/to/gdb ./program
+==890== and then give GDB the following command
+==890==   target remote | /usr/bin/vgdb --pid=890
+==890== --pid is optional if only one valgrind process is running
+==890==
+--890-- REDIR: 0x4028b00 (ld-linux-x86-64.so.2:strlen) redirected to 0x580c2e1a (???)
+--890-- REDIR: 0x40272b0 (ld-linux-x86-64.so.2:index) redirected to 0x580c2e34 (???)
+--890-- Reading syms from /usr/libexec/valgrind/vgpreload_core-amd64-linux.so
+--890-- Reading syms from /usr/libexec/valgrind/vgpreload_memcheck-amd64-linux.so
+==890== WARNING: new redirection conflicts with existing -- ignoring it
+--890--     old: 0x04028b00 (strlen              ) R-> (0000.0) 0x580c2e1a ???
+--890--     new: 0x04028b00 (strlen              ) R-> (2007.0) 0x0484f340 strlen
+--890-- REDIR: 0x40274e0 (ld-linux-x86-64.so.2:strcmp) redirected to 0x4850460 (strcmp)
+--890-- REDIR: 0x4026910 (ld-linux-x86-64.so.2:mempcpy) redirected to 0x4853cd0 (mempcpy)
+--890-- Reading syms from /usr/lib/x86_64-linux-gnu/libc.so.6
+--890--   Considering /usr/lib/debug/.build-id/27/4eec488d230825a136fa9c4d85370fed7a0a5e.debug ..
+--890--   .. build-id is valid
+--890-- REDIR: 0x4028ca0 (ld-linux-x86-64.so.2:strncmp) redirected to 0x484fc90 (strncmp)
+--890-- REDIR: 0x4917050 (libc.so.6:strnlen) redirected to 0x483d1c0 (_vgnU_ifunc_wrapper)
+--890-- REDIR: 0x49170e0 (libc.so.6:strpbrk) redirected to 0x483d1c0 (_vgnU_ifunc_wrapper)
+--890-- REDIR: 0x49151a0 (libc.so.6:strcmp) redirected to 0x483d1c0 (_vgnU_ifunc_wrapper)
+--890-- REDIR: 0x492e3b0 (libc.so.6:wcsnlen) redirected to 0x483d1c0 (_vgnU_ifunc_wrapper)
+--890-- REDIR: 0x4914290 (libc.so.6:memset) redirected to 0x483d1c0 (_vgnU_ifunc_wrapper)
+--890-- REDIR: 0x492db20 (libc.so.6:wcslen) redirected to 0x483d1c0 (_vgnU_ifunc_wrapper)
+--890-- REDIR: 0x49993f0 (libc.so.6:__memcpy_chk) redirected to 0x483d1c0 (_vgnU_ifunc_wrapper)
+--890-- REDIR: 0x4914200 (libc.so.6:memrchr) redirected to 0x483d1c0 (_vgnU_ifunc_wrapper)
+--890-- REDIR: 0x492e350 (libc.so.6:wcsncpy) redirected to 0x483d1c0 (_vgnU_ifunc_wrapper)
+--890-- REDIR: 0x4913720 (libc.so.6:memcpy@@GLIBC_2.14) redirected to 0x483d1c0 (_vgnU_ifunc_wrapper)
+--890-- REDIR: 0x492c8e0 (libc.so.6:wcschr) redirected to 0x483d1c0 (_vgnU_ifunc_wrapper)
+--890-- REDIR: 0x4915090 (libc.so.6:index) redirected to 0x483d1c0 (_vgnU_ifunc_wrapper)
+--890-- REDIR: 0x4917110 (libc.so.6:rindex) redirected to 0x483d1c0 (_vgnU_ifunc_wrapper)
+--890-- REDIR: 0x492c990 (libc.so.6:wcscmp) redirected to 0x483d1c0 (_vgnU_ifunc_wrapper)
+--890-- REDIR: 0x49144b0 (libc.so.6:stpncpy) redirected to 0x483d1c0 (_vgnU_ifunc_wrapper)
+--890-- REDIR: 0x493aeb0 (libc.so.6:wmemchr) redirected to 0x483d1c0 (_vgnU_ifunc_wrapper)
+--890-- REDIR: 0x4916ef0 (libc.so.6:strncmp) redirected to 0x483d1c0 (_vgnU_ifunc_wrapper)
+--890-- REDIR: 0x4914510 (libc.so.6:strcasecmp) redirected to 0x483d1c0 (_vgnU_ifunc_wrapper)
+--890-- REDIR: 0x4916310 (libc.so.6:strcspn) redirected to 0x483d1c0 (_vgnU_ifunc_wrapper)
+--890-- REDIR: 0x492d8f0 (libc.so.6:wcscpy) redirected to 0x483d1c0 (_vgnU_ifunc_wrapper)
+--890-- REDIR: 0x4915020 (libc.so.6:strcat) redirected to 0x483d1c0 (_vgnU_ifunc_wrapper)
+--890-- REDIR: 0x4916df0 (libc.so.6:strncasecmp_l) redirected to 0x483d1c0 (_vgnU_ifunc_wrapper)
+--890-- REDIR: 0x4915110 (libc.so.6:strchrnul) redirected to 0x483d1c0 (_vgnU_ifunc_wrapper)
+--890-- REDIR: 0x4913630 (libc.so.6:bcmp) redirected to 0x483d1c0 (_vgnU_ifunc_wrapper)
+--890-- REDIR: 0x49162a0 (libc.so.6:strcpy) redirected to 0x483d1c0 (_vgnU_ifunc_wrapper)
+--890-- REDIR: 0x49145b0 (libc.so.6:strcasecmp_l) redirected to 0x483d1c0 (_vgnU_ifunc_wrapper)
+--890-- REDIR: 0x4916cc0 (libc.so.6:strlen) redirected to 0x483d1c0 (_vgnU_ifunc_wrapper)
+--890-- REDIR: 0x4916f90 (libc.so.6:strncpy) redirected to 0x483d1c0 (_vgnU_ifunc_wrapper)
+--890-- REDIR: 0x493af30 (libc.so.6:wmemcmp) redirected to 0x483d1c0 (_vgnU_ifunc_wrapper)
+--890-- REDIR: 0x4999510 (libc.so.6:__memmove_chk) redirected to 0x483d1c0 (_vgnU_ifunc_wrapper)
+==890== WARNING: new redirection conflicts with existing -- ignoring it
+--890--     old: 0x049eaa10 (__memcpy_chk_avx_una) R-> (2030.0) 0x04853dd0 __memcpy_chk
+--890--     new: 0x049eaa10 (__memcpy_chk_avx_una) R-> (2024.0) 0x04853740 __memmove_chk
+--890-- REDIR: 0x4914440 (libc.so.6:stpcpy) redirected to 0x483d1c0 (_vgnU_ifunc_wrapper)
+--890-- REDIR: 0x4913fc0 (libc.so.6:memmove) redirected to 0x483d1c0 (_vgnU_ifunc_wrapper)
+==890== Preferring higher priority redirection:
+--890--     old: 0x049eaa40 (__memcpy_avx_unalign) R-> (2018.0) 0x04851580 __memcpy_avx_unaligned_erms
+--890--     new: 0x049eaa40 (__memcpy_avx_unalign) R-> (2018.1) 0x04852d60 memmove
+--890-- REDIR: 0x49135b0 (libc.so.6:memchr) redirected to 0x483d1c0 (_vgnU_ifunc_wrapper)
+--890-- REDIR: 0x49172e0 (libc.so.6:strspn) redirected to 0x483d1c0 (_vgnU_ifunc_wrapper)
+--890-- REDIR: 0x49140e0 (libc.so.6:mempcpy) redirected to 0x483d1c0 (_vgnU_ifunc_wrapper)
+--890-- REDIR: 0x4916d50 (libc.so.6:strncasecmp) redirected to 0x483d1c0 (_vgnU_ifunc_wrapper)
+--890-- REDIR: 0x49ef630 (libc.so.6:__strrchr_avx2) redirected to 0x484ed20 (rindex)
+--890-- REDIR: 0x49ed780 (libc.so.6:__strlen_avx2) redirected to 0x484f220 (strlen)
+--890-- REDIR: 0x49ecde0 (libc.so.6:__strchrnul_avx2) redirected to 0x48537b0 (strchrnul)
+--890-- REDIR: 0x49eaa40 (libc.so.6:__memcpy_avx_unaligned_erms) redirected to 0x4852d60 (memmove)
+--890-- REDIR: 0x490f650 (libc.so.6:malloc) redirected to 0x48467b0 (malloc)
+Program input: '3*5+15-2;'
+--890-- REDIR: 0x49ee860 (libc.so.6:__strncmp_avx2) redirected to 0x484fab0 (strncmp)
+--890-- REDIR: 0x49eb440 (libc.so.6:__memset_avx2_unaligned_erms) redirected to 0x4852c50 (memset)
+--890-- REDIR: 0x49eaa00 (libc.so.6:__mempcpy_avx_unaligned_erms) redirected to 0x48538d0 (mempcpy)
+[Token type=TT_NUMBER length=1 data=3.000000]
+[Token type=TT_OP_MUL length=1 data=]
+[Token type=TT_NUMBER length=1 data=5.000000]
+[Token type=TT_OP_ADD length=1 data=]
+[Token type=TT_NUMBER length=2 data=15.000000]
+[Token type=TT_OP_SUB length=1 data=]
+[Token type=TT_NUMBER length=1 data=2.000000]
+[Token type=TT_DELIM length=1 data=]
+--890-- REDIR: 0x490fd30 (libc.so.6:free) redirected to 0x4849820 (free)
+AST_S
+ AST_BINARY_EXPR
+.>AST_BINARY_EXPR
+.. AST_BINARY_EXPR
+...>AST_NUM_EXPR
+.... 3.000000
+...>AST_NUM_EXPR
+.... 5.000000
+...>TT_OP_MUL
+.. AST_NUM_EXPR
+...>15.000000
+.. TT_OP_ADD
+.>AST_NUM_EXPR
+.. 2.000000
+.>TT_OP_SUB
+[VT_NUMBER]=28.000000
+==890==
+==890== HEAP SUMMARY:
+==890==     in use at exit: 0 bytes in 0 blocks
+==890==   total heap usage: 35 allocs, 35 frees, 2,032 bytes allocated
+==890==
+==890== All heap blocks were freed -- no leaks are possible
+==890==
+==890== ERROR SUMMARY: 0 errors from 0 contexts (suppressed: 0 from 0)
+```
+
 ### Code Examples
 
 Code examples can be found in [./examples](./examples).
@@ -231,8 +374,16 @@ Code examples can be found in [./examples](./examples).
 
 ## Using the Interpreter
 
-To use the interpreter in interactive mode/REPL, run it as `python main.py --interactive` or `python main.py -i`. To interpret code from a file,
-run `python main.py --file <file>` or `python main.py -f <file>` where `<file>` is path to a file that contains *Mini-C* code e.g. `python main.py --file .\examples\fibonacci_sum.mc`.
+~To use the interpreter in interactive mode/REPL, run it as `python main.py --interactive` or `python main.py -i`. To interpret code from a file,
+run `python main.py --file <file>` or `python main.py -f <file>` where `<file>` is path to a file that contains *Mini-C* code e.g. `python main.py --file .\examples\fibonacci_sum.mc`.~
+
+### Windows
+
+Compile with Visual Studio or MinGW compiler and run.
+
+### Linux
+
+Build with make `MODE=release make` or `MODE=debug make`. Run valgrind checks with `MODE=debug make valgrind`. Clean with `make clean`
 
 ## Extending the Language
 Implement in future:

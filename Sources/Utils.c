@@ -201,7 +201,7 @@ void _PrintToken(Token* token)
 	char data[256];
 	_GetTokenDataString(token, data, sizeof(data));
 
-	printf("[Token type=%s length=%lu data=%s]\n", token_type, length, data);
+	printf("[Token type=%s length=%llu data=%s]\n", token_type, length, data);
 }
 
 void PrintTokens(List* list)

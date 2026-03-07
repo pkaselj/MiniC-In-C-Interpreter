@@ -123,4 +123,5 @@ typedef struct AstNode AstNode;
 
 // ---- Public functions
 
+void ast_tree_free(AstNode* tree);
 AstNode* parser_perform(List* tokens);
