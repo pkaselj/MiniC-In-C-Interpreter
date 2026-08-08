@@ -338,7 +338,6 @@ void _jit_compile_program_prolog(executable* exe)
 
 void _jit_compile_program_epilog(executable* exe)
 {
-	_amd64_emit_pop_rax(exe); // Take the last statements value for return
 	_amd64_emit_ret(exe);
 }
 
