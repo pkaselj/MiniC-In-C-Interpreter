@@ -135,6 +135,7 @@
   <ItemGroup>
     <ClInclude Include="Includes\Common.h" />
     <ClInclude Include="Includes\Interpreter.h" />
+    <ClInclude Include="Includes\JitCompiler.h" />
     <ClInclude Include="Includes\Lexer.h" />
     <ClInclude Include="Includes\List.h" />
     <ClInclude Include="Includes\Operators.h" />
@@ -144,6 +145,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Sources\Interpreter.c" />
+    <ClCompile Include="Sources\JitCompiler.c" />
     <ClCompile Include="Sources\Lexer.c" />
     <ClCompile Include="Sources\List.c" />
     <ClCompile Include="Sources\main.c" />
