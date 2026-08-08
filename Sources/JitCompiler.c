@@ -112,14 +112,14 @@ typedef enum _enu_register
 	REG_R15 = 15,
 
 	/* 80-bit x87 */
-	ST0 = 0,
-	ST1 = 1,
-	ST2 = 2,
-	ST3 = 3,
-	ST4 = 4,
-	ST5 = 5,
-	ST6 = 6,
-	ST7 = 7,
+	REG_ST0 = 0,
+	REG_ST1 = 1,
+	REG_ST2 = 2,
+	REG_ST3 = 3,
+	REG_ST4 = 4,
+	REG_ST5 = 5,
+	REG_ST6 = 6,
+	REG_ST7 = 7,
 
 	/* 64-bit MMX */
 	REG_MMX0 = 0,
