@@ -14,7 +14,7 @@
 int main(int argc, char* argv[])
 {
 	//StringView input = sv_create("function a(b, c, d){ b + c * d; } if(x) { y  = 4; } else { y = 5; }");
-	StringView input = sv_create("1+2;");
+	StringView input = sv_create("1+2*4-3;");
 	LogInfo("Program input: '%s'\n", input.data);
 
 	List* tokens = lexer_perform(input);
@@ -30,7 +30,7 @@ int main(int argc, char* argv[])
 	__try
 	{
 		unsigned long long result = compiled_main();
-		LogInfo("Result from calling the compiled code: [%llX]\n", result);
+		LogInfo("Result from calling the compiled code: [%llu / 0x%llX]\n", result, result);
 	}
 	__except ((ex = GetExceptionCode()), EXCEPTION_EXECUTE_HANDLER)
 	{

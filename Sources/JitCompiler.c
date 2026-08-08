@@ -468,11 +468,11 @@ void _jit_compile_binary_expression(AstNode* tree, executable* exe)
 	AstNode* right = tree->u.binary_expr.right;
 
 	_jit_compile_statement(left, exe); // TODO: Not sure if i would use compile statement or expression?
-	// Last expression pushes result to stack, load to reg for calculation
-	_amd64_emit_pop_r64(exe, REG_RAX); // TOOD: How are we sure it will be in rax in the meantime?
-
 	_jit_compile_statement(right, exe); // TODO: Not sure if i would use compile statement or expression?
-	_amd64_emit_pop_r64(exe, REG_RCX);
+
+	// Last expression pushes result to stack, load to reg for calculation
+	_amd64_emit_pop_r64(exe, REG_RCX); // Pop operand 2 (right)
+	_amd64_emit_pop_r64(exe, REG_RAX); // Pop operand 1 (left)
 
 	LexTokenType op = tree->u.binary_expr.op;
 	switch (op)
