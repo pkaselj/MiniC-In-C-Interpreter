@@ -24,6 +24,12 @@
 
 // --------------------------------------------
 
+// Lower DoubleWord of a QuadWord
+#define LODWORD(_Q) (_Q & 0xFFFFFFFF)
+// Upper DoubleWord of a QuadWord
+#define HIDWORD(_Q) ((_Q >> 32) & 0xFFFFFFFF)
+
+
 // Mask and Left-Shift
 #define _MLS(_V, _M, _S) (( _V & _M ) << _S)
 
@@ -33,12 +39,36 @@
 // Take i-th least significant byte from multibyte word
 #define _BYTE_OF(_V, _B) _RSM(_V, 0xFF, (8 * _B))
 
+// MODRM MOD values
+typedef enum _enu_modrm_mod
+{
+	MOD_RR = 0b11,	/* Register to Register */
+	MOD_O0 = 0b00,	/* Addressing mode - immediate */
+	MOD_O8 = 0b01,   /* Addressing mode - 8-bit offset */
+	MOD_O32 = 0b10,  /* Addressing mode - 32-bit offset */
+} enu_modrm_mod;
+
 #define _MODRM(_MOD, _REG, _RM) (_MLS(_MOD, 0x03, 6) | _MLS(_REG, 0x07, 3) | _MLS(_RM, 0x07, 0))
+// RM value to signal SIB usage
+#define _RM_SIB 4 
+
+#define _SIB(_S, _I, _B) (_MLS(_S, 0x03, 6) | _MLS(_I, 0x07, 3) | _MLS(_B, 0x07, 0))
+typedef enum _enu_sib_scale
+{
+	SIB_S_1 = 0b00,
+	SIB_S_2 = 0b01,
+	SIB_S_4 = 0b10,
+	SIB_S_8 = 0b11
+} enu_sib_scale;
+
 
 #define _REX(_W, _R, _X, _B) (0x40 | (_W << 3) | (_R << 2) | (_X << 1) | (_B << 0))
 
 typedef enum _enu_register
 {
+	/* Special values */
+	REG_SIB_NO_REG = 4, // SIB value for specifying that register is not used
+
 	/* 8-bit GP */
 	REG_AL		= 0,
 	REG_CL		= 1,
@@ -272,6 +302,15 @@ void _jit_exe_w8(executable* exe, uint8_t byte)
 	exe->current_size++;
 }
 
+
+void _jit_exe_w32(executable* exe, uint32_t value)
+{
+	_jit_exe_w8(exe, _BYTE_OF(value, 0));
+	_jit_exe_w8(exe, _BYTE_OF(value, 1));
+	_jit_exe_w8(exe, _BYTE_OF(value, 2));
+	_jit_exe_w8(exe, _BYTE_OF(value, 3));
+}
+
 void _jit_exe_w64(executable* exe, uint64_t value)
 {
 	_jit_exe_w8(exe, _BYTE_OF(value, 0));
@@ -302,16 +341,44 @@ void _jit_exe_dump_file(executable* exe, const char* output_path)
 
 // --------------------------------------------
 
-void _amd64_emit_push_rbp(executable* exe)
+void _amd64_emit_mov_r64_imm64(executable* exe, enu_register r64_0, uint64_t imm64_1);
+void _amd64_emit_mov_m32_imm32_disp8(executable* exe, uint32_t imm32_0, enu_register rbase, enu_sib_scale scale, uint8_t index, uint8_t disp8);
+
+// ------
+
+// Note: x86-64 Sign extends imm32_0 to 64 bits on stack
+void _amd64_emit_push_imm32(executable* exe, uint32_t imm32_0)
 {
-	_jit_exe_w8(exe, 0x50 + REG_RBP);
+	_jit_exe_w8(exe, 0x68);
+	_jit_exe_w32(exe, imm32_0);
 }
 
-void _amd64_emit_mov_rbp_rsp(executable* exe)
+void _amd64_emit_push_r64(executable* exe, enu_register r64_0)
+{
+	_jit_exe_w8(exe, 0x50 + r64_0);
+}
+
+void _amd64_emit_push_imm64(executable* exe, uint64_t imm64_0)
+{
+	_amd64_emit_push_imm32(exe, LODWORD(imm64_0));
+	_amd64_emit_mov_m32_imm32_disp8(exe, HIWORD(imm64_0), REG_RSP, SIB_S_1, REG_SIB_NO_REG, 4); // [RSP + 4] <- HIWORD(imm64)
+}
+
+void _amd64_emit_mov_m32_imm32_disp8(executable* exe, uint32_t imm32_0, enu_register rbase, enu_sib_scale scale, uint8_t rindex, uint8_t disp8)
+{
+	_jit_exe_w8(exe, 0xC7);
+	_jit_exe_w8(exe, _MODRM(MOD_O8, 0, _RM_SIB)); // Use SIB with 8b offset
+	_jit_exe_w8(exe, _SIB(scale, rindex, rbase)); // [R(rbase) + scale * R(rindex) + ... disp8 (below)]
+	_jit_exe_w8(exe, disp8); 
+	_jit_exe_w32(exe, imm32_0);
+}
+
+// r64_0 <- r64_1
+void _amd64_emit_mov_r64_r64(executable* exe, enu_register r64_0, enu_register r64_1)
 {
 	_jit_exe_w8(exe, _REX(1, 0, 0, 0)); // REX.W
 	_jit_exe_w8(exe, 0x89);
-	_jit_exe_w8(exe, _MODRM(0b11 /*RR*/, REG_RSP/*op2*/, REG_RBP/*op1*/));
+	_jit_exe_w8(exe, _MODRM(MOD_RR, r64_1 /*op2*/, r64_0/*op1*/));
 }
 
 void _amd64_emit_pop_r64(executable* exe, enu_register r64_0)
@@ -324,25 +391,128 @@ void _amd64_emit_ret(executable* exe)
 	_jit_exe_w8(exe, 0xC3); // RET (near)
 }
 
-void _amd64_emit_mov_rax_imm64(executable* exe, uint64_t imm64_0)
+// r64_0 <- imm64_0
+void _amd64_emit_mov_r64_imm64(executable* exe, enu_register r64_0, uint64_t imm64_0)
 {
 	_jit_exe_w8(exe, _REX(1, 0, 0, 0));
-	_jit_exe_w8(exe, 0xB8 + REG_RAX);
+	_jit_exe_w8(exe, 0xB8 + r64_0);
 	_jit_exe_w64(exe, imm64_0);
+}
+
+// r64_0 <- r64_0 + r64_1
+void _amd64_emit_add_r64_r64(executable* exe, enu_register r64_0, enu_register r64_1)
+{
+	_jit_exe_w8(exe, _REX(1, 0, 0, 0)); // REX.W
+	_jit_exe_w8(exe, 0x01);
+	_jit_exe_w8(exe, _MODRM(MOD_RR, r64_1, r64_0));
+}
+
+// r64_0 <- r64_0 - r64_1
+void _amd64_emit_sub_r64_r64(executable* exe, enu_register r64_0, enu_register r64_1)
+{
+	_jit_exe_w8(exe, _REX(1, 0, 0, 0));
+	_jit_exe_w8(exe, 0x29);
+	_jit_exe_w8(exe, _MODRM(MOD_RR, r64_1, r64_0));
+}
+
+// r64_0 <- r64_0 * r64_1
+void _amd64_emit_imul_r64_r64(executable* exe, enu_register r64_0, enu_register r64_1)
+{
+	_jit_exe_w8(exe, _REX(1, 0, 0, 0));
+	_jit_exe_w8(exe, 0x0F);
+	_jit_exe_w8(exe, 0xAF);
+	_jit_exe_w8(exe, _MODRM(MOD_RR, r64_0, r64_1));
 }
 
 // --------------------------------------------
 
+void _jit_compile_statement(AstNode* tree, executable* exe);
+
+// -----------
+
 void _jit_compile_program_prolog(executable* exe)
 {
-	_amd64_emit_push_rbp(exe);
-	_amd64_emit_mov_rbp_rsp(exe);
+	_amd64_emit_push_r64(exe, REG_RBP);
+	_amd64_emit_mov_r64_r64(exe, REG_RBP, REG_RSP);
 }
 
 void _jit_compile_program_epilog(executable* exe)
 {
+	// TODO: Each statement pushes its value to stack, remove last one
+	// and return it at the end of the program. The problem is when there 
+	// is no expressions i.e. nothing to pop. We will ignore it now, but keep in
+	// mind the program must not be empty. Stupid edge case.
+	_amd64_emit_pop_r64(exe, REG_RAX); 
+
 	_amd64_emit_pop_r64(exe, REG_RBP);
 	_amd64_emit_ret(exe);
+}
+
+void _jit_compile_numeric_expression(AstNode* tree, executable* exe)
+{
+	assert(exe);
+	assert(tree);
+	assert(tree->type == AST_NUM_EXPR);
+
+	uint64_t imm64_0 = (uint64_t)tree->u.number.value; // TODO: Cast to uint64 for now
+	_amd64_emit_push_imm64(exe, imm64_0);
+}
+
+void _jit_compile_binary_expression(AstNode* tree, executable* exe)
+{
+	assert(exe);
+	assert(tree);
+	assert(tree->type == AST_BINARY_EXPR);
+
+	AstNode* left = tree->u.binary_expr.left;
+	AstNode* right = tree->u.binary_expr.right;
+
+	_jit_compile_statement(left, exe); // TODO: Not sure if i would use compile statement or expression?
+	// Last expression pushes result to stack, load to reg for calculation
+	_amd64_emit_pop_r64(exe, REG_RAX); // TOOD: How are we sure it will be in rax in the meantime?
+
+	_jit_compile_statement(right, exe); // TODO: Not sure if i would use compile statement or expression?
+	_amd64_emit_pop_r64(exe, REG_RCX);
+
+	LexTokenType op = tree->u.binary_expr.op;
+	switch (op)
+	{
+	case TT_OP_ADD:
+		_amd64_emit_add_r64_r64(exe, REG_RAX, REG_RCX);
+		break;
+	case TT_OP_SUB:
+		_amd64_emit_sub_r64_r64(exe, REG_RAX, REG_RCX);
+		break;
+	case TT_OP_MUL:
+		_amd64_emit_imul_r64_r64(exe, REG_RAX, REG_RCX);
+		break;
+	// TODO: More operators, DIV?
+	default:
+		LogError("JIT :: _jit_compile_binary_expression() - cannot handle operator [%d / %s]\n", op, GetLexTokenTypeString(op));
+		break;
+	}
+
+	_amd64_emit_push_r64(exe, REG_RAX);
+}
+
+void _jit_compile_statement(AstNode* tree, executable* exe)
+{
+	assert(exe);
+	assert(tree);
+	//assert(tree->type == ???);
+
+	switch (tree->type)
+	{
+	case AST_BINARY_EXPR:
+		_jit_compile_binary_expression(tree, exe);
+		break;
+	case AST_NUM_EXPR:
+		_jit_compile_numeric_expression(tree, exe);
+		break;
+	default:
+		LogError("JIT :: _jit_compile_statement() - cannot handle node type [%d / %s]\n", tree->type, GetAstNodeTypeString(tree->type));
+		break;
+	}
 }
 
 void _jit_compile_program(AstNode* tree, executable* exe)
@@ -351,10 +521,13 @@ void _jit_compile_program(AstNode* tree, executable* exe)
 
 	_jit_compile_program_prolog(exe);
 
-
-	// TODO: Expression
-	// For now return 0xAB
-	_amd64_emit_mov_rax_imm64(exe, 0xAABBCCDDEEFF0011);
+	ListConstIterator* it = list_create_iterator(tree->u.program.statements);
+	for (;list_iterator_valid(it); list_iterator_advance(it))
+	{
+		AstNode* stmt = (AstNode*)list_iterator_get(it);
+		_jit_compile_statement(stmt, exe);
+	}
+	list_free_iterator(it);
 
 	_jit_compile_program_epilog(exe);
 }

@@ -178,14 +178,24 @@ ListNode* list_iterator_current(ListConstIterator* iter)
 	return iter->current;
 }
 
-NONOWNING ListNode* list_iterator_get(ListConstIterator* iter)
+NONOWNING void* list_iterator_get(ListConstIterator* iter)
 {
 	if (!iter)
 	{
 		return NULL;
 	}
 
-	return iter->current;
+	return list_node_data_get(iter->current);
+}
+
+_Bool list_iterator_valid(ListConstIterator* iter)
+{
+	if (!iter)
+	{
+		return false;
+	}
+
+	return (iter->current != NULL);
 }
 
 NONOWNING ListNode* list_iterator_advance(ListConstIterator* iter)

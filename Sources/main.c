@@ -7,12 +7,15 @@
 #include <JitCompiler.h>
 #include <List.h>
 
+#define WIN32_LEAN_AND_MEAN
+#include <Windows.h>
+
 
 int main(int argc, char* argv[])
 {
 	//StringView input = sv_create("function a(b, c, d){ b + c * d; } if(x) { y  = 4; } else { y = 5; }");
-	StringView input = sv_create("3*5+15-2;");
-	printf("Program input: '%s'\n", input.data);
+	StringView input = sv_create("1+2;");
+	LogInfo("Program input: '%s'\n", input.data);
 
 	List* tokens = lexer_perform(input);
 	PrintTokens(tokens);
@@ -22,8 +25,17 @@ int main(int argc, char* argv[])
 
 	//interpreter_perform(NULL, tree);
 	fn_compiled_entry compiled_main = JIT_compile(tree);
-	unsigned long long result = compiled_main();
-	printf("Result from calling the compiled code: [%llX]\n", result);
+
+	DWORD ex = 0;
+	__try
+	{
+		unsigned long long result = compiled_main();
+		LogInfo("Result from calling the compiled code: [%llX]\n", result);
+	}
+	__except ((ex = GetExceptionCode()), EXCEPTION_EXECUTE_HANDLER)
+	{
+		LogError("Failed to execute compiled code. Exception: [%ud / %X]\n", ex, ex);
+	}
 
 	ast_tree_free(tree);
 	list_free(tokens);

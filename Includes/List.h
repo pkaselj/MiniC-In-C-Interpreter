@@ -2,6 +2,7 @@
 
 #include <Common.h>
 #include <stddef.h>
+#include <stdbool.h>
 
 typedef void (*ListNodeDestructor)(void*);
 typedef struct ListNode ListNode;
@@ -24,7 +25,8 @@ void list_free_node(TRANSFER ListNode* node);
 ListConstIterator* list_create_iterator(List* list);
 void list_free_iterator(ListConstIterator* iter);
 NONOWNING ListNode* list_iterator_advance(ListConstIterator* iter);
-NONOWNING ListNode* list_iterator_get(ListConstIterator* iter);
+NONOWNING void* list_iterator_get(ListConstIterator* iter);
+bool list_iterator_valid(ListConstIterator* iter);
 size_t list_interator_index(ListConstIterator* iter);
 
 // Returns nonowning pointer to node data

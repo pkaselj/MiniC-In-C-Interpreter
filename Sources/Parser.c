@@ -10,7 +10,7 @@ static NONOWNING Token* _parser_peek(ListConstIterator* iter)
 {
 	assert(iter);
 
-	return list_node_data_get(list_iterator_get(iter));
+	return list_iterator_get(iter);
 }
 
 static Token* _parser_advance(ListConstIterator* iter)
@@ -24,10 +24,9 @@ static Token* _parser_match(ListConstIterator* iter, LexTokenType required)
 {
 	assert(iter);
 
-	ListNode* current = list_iterator_get(iter);
-	Token* _token = list_node_data_get(current);
+	Token* _token = list_iterator_get(iter);
 
-	if (!current || !_token)
+	if (!_token)
 	{
 		return NULL;
 	}
@@ -46,10 +45,9 @@ static Token* _parser_match_any(ListConstIterator* iter, const LexTokenType* req
 	assert(iter);
 	assert(required_array);
 
-	ListNode* current = list_iterator_get(iter);
-	Token* _token = list_node_data_get(current);
+	Token* _token = list_iterator_get(iter);
 
-	if (!current || !_token)
+	if (!_token)
 	{
 		return NULL;
 	}
