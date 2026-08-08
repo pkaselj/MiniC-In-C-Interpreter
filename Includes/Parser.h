@@ -47,14 +47,14 @@ struct AstNode
 		struct
 		{
 			struct AstNode* child;
-			TokenType op;
+			LexTokenType op;
 		} unary_expr;
 
 		struct
 		{
 			struct AstNode* right;
 			struct AstNode* left;
-			TokenType op;
+			LexTokenType op;
 		} binary_expr;
 
 		struct

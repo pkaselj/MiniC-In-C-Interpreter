@@ -2,6 +2,6 @@
 
 #include <Parser.h>
 
-typedef int(*fn_compiled_main)(void);
+typedef unsigned long long(*fn_compiled_entry)(void);
 
-fn_compiled_main JIT_compile(AstNode* tree);
+fn_compiled_entry JIT_compile(AstNode* tree);

@@ -13,6 +13,9 @@
 #error "JIT Compiler for Win32 supoprts only AMD64 processors (Intel x86-64)"
 #endif // !defined(_M_AMD64)
 
+#define WIN32_LEAN_AND_MEAN
+#include <Windows.h>
+
 #else
 
 #error "JIT Compiler only supported on the following platforms: Win32x64"
@@ -226,7 +229,7 @@ typedef enum _enu_register
 	REG_DR14 = 14,
 	REG_DR15 = 15
 
-} _enu_register;
+} enu_register;
 
 // --------------------------------------------
 
@@ -244,7 +247,7 @@ executable* _jit_exe_initialize()
 	assert(exe);
 
 	exe->max_size = 4096;
-	exe->page_base = (unsigned char*)malloc(4096);
+	exe->page_base = VirtualAlloc(NULL, exe->max_size, MEM_COMMIT | MEM_RESERVE, PAGE_EXECUTE_READWRITE);
 	exe->current_pos = exe->page_base;
 	exe->current_size = 0;
 
@@ -311,9 +314,9 @@ void _amd64_emit_mov_rbp_rsp(executable* exe)
 	_jit_exe_w8(exe, _MODRM(0b11 /*RR*/, REG_RSP/*op2*/, REG_RBP/*op1*/));
 }
 
-void _amd64_emit_pop_rax(executable* exe)
+void _amd64_emit_pop_r64(executable* exe, enu_register r64_0)
 {
-	_jit_exe_w8(exe, 0x58 + REG_RAX);
+	_jit_exe_w8(exe, 0x58 + r64_0);
 }
 
 void _amd64_emit_ret(executable* exe)
@@ -338,6 +341,7 @@ void _jit_compile_program_prolog(executable* exe)
 
 void _jit_compile_program_epilog(executable* exe)
 {
+	_amd64_emit_pop_r64(exe, REG_RBP);
 	_amd64_emit_ret(exe);
 }
 
@@ -358,7 +362,7 @@ void _jit_compile_program(AstNode* tree, executable* exe)
 
 // --------------------------------------------
 
-fn_compiled_main JIT_compile(AstNode* tree)
+fn_compiled_entry JIT_compile(AstNode* tree)
 {
 	assert(tree);
 	// TODO: Allocate page from OS
@@ -370,12 +374,14 @@ fn_compiled_main JIT_compile(AstNode* tree)
 
 	// TODO: Make page executable
 	_jit_exe_dump_file(exe, "S:\\output.bin");
+	
+	fn_compiled_entry program_entry = (fn_compiled_entry)exe->page_base;
 	_jit_exe_free(exe);
 
-	return NULL; //TODO: Return ptr to compiled function
+	return program_entry; //TODO: Return ptr to compiled function
 }
 
-void JIT_release(fn_compiled_main fn_address)
+void JIT_release(fn_compiled_entry fn_address)
 {
 	// TODO: Release OS page
 }

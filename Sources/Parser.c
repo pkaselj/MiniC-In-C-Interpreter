@@ -20,7 +20,7 @@ static Token* _parser_advance(ListConstIterator* iter)
 	return list_node_data_get(list_iterator_advance(iter));
 }
 
-static Token* _parser_match(ListConstIterator* iter, TokenType required)
+static Token* _parser_match(ListConstIterator* iter, LexTokenType required)
 {
 	assert(iter);
 
@@ -41,7 +41,7 @@ static Token* _parser_match(ListConstIterator* iter, TokenType required)
 	return NULL;
 }
 
-static Token* _parser_match_any(ListConstIterator* iter, const TokenType* required_array, size_t items)
+static Token* _parser_match_any(ListConstIterator* iter, const LexTokenType* required_array, size_t items)
 {
 	assert(iter);
 	assert(required_array);
@@ -66,7 +66,7 @@ static Token* _parser_match_any(ListConstIterator* iter, const TokenType* requir
 	return NULL;
 }
 
-static Token* _parser_expect(ListConstIterator* iter, TokenType required)
+static Token* _parser_expect(ListConstIterator* iter, LexTokenType required)
 {
 	// TODO: track index and handle errors better.
 	Token* _token = _parser_match(iter, required);
@@ -77,16 +77,16 @@ static Token* _parser_expect(ListConstIterator* iter, TokenType required)
 		LogError("Parser: Token at index [%llu] - expected token of type [%d / %s], got [%d / %s]!\n", 
 			index, 
 			_token->type,
-			GetTokenTypeString(_token->type),
+			GetLexTokenTypeString(_token->type),
 			required,
-			GetTokenTypeString(required)
+			GetLexTokenTypeString(required)
 		);
 		exit(-1);
 	}
 	return _token;
 }
 
-static Token* _parser_expect_any(ListConstIterator* iter, const TokenType* required_array, size_t items)
+static Token* _parser_expect_any(ListConstIterator* iter, const LexTokenType* required_array, size_t items)
 {
 	// TODO: track index and handle errors better.
 	Token* _token = _parser_match_any(iter, required_array, items);
@@ -97,7 +97,7 @@ static Token* _parser_expect_any(ListConstIterator* iter, const TokenType* requi
 		LogError("Parser: Token at index [%llu] - expected token of type [??], got [%d / %s]!\n",
 			index,
 			_token->type,
-			GetTokenTypeString(_token->type)
+			GetLexTokenTypeString(_token->type)
 		); // TODO expected
 		exit(-1);
 	}
@@ -134,7 +134,7 @@ static AstNode* ast_create_assign(TRANSFER AstNode* left, TRANSFER AstNode* righ
 	return node;
 }
 
-static AstNode* ast_create_unary_expr(TRANSFER AstNode* child, TokenType op)
+static AstNode* ast_create_unary_expr(TRANSFER AstNode* child, LexTokenType op)
 {
 	AstNode* node = _ast_create_empty();
 	node->type = AST_UNARY_EXPR;
@@ -143,7 +143,7 @@ static AstNode* ast_create_unary_expr(TRANSFER AstNode* child, TokenType op)
 	return node;
 }
 
-static AstNode* ast_create_binary_expr(TRANSFER AstNode* left, TRANSFER AstNode* right, TokenType op)
+static AstNode* ast_create_binary_expr(TRANSFER AstNode* left, TRANSFER AstNode* right, LexTokenType op)
 {
 	AstNode* node = _ast_create_empty();
 	node->type = AST_BINARY_EXPR;
@@ -583,7 +583,7 @@ static AstNode* parse_fn_call(ListConstIterator* iter)
 static AstNode* parse_unary(ListConstIterator* iter)
 {
 	Token* token;
-	const TokenType required[] = { TT_OP_ADD, TT_OP_SUB, TT_OP_NOT };
+	const LexTokenType required[] = { TT_OP_ADD, TT_OP_SUB, TT_OP_NOT };
 
 	if (token = _parser_match_any(iter, required, sizeof(required) / sizeof(required[0])))
 	{
@@ -598,7 +598,7 @@ static AstNode* parse_term(ListConstIterator* iter)
 {
 	AstNode* node = parse_unary(iter);
 	Token* token;
-	const TokenType required[] = { TT_OP_MUL, TT_OP_DIV };
+	const LexTokenType required[] = { TT_OP_MUL, TT_OP_DIV };
 
 	while ((token = _parser_match_any(iter, required, sizeof(required) / sizeof(required[0]))))
 	{
@@ -613,7 +613,7 @@ static AstNode* parse_additive(ListConstIterator* iter)
 {
 	AstNode* node = parse_term(iter);
 	Token* token;
-	const TokenType required[] = { TT_OP_ADD, TT_OP_SUB };
+	const LexTokenType required[] = { TT_OP_ADD, TT_OP_SUB };
 
 	while ((token = _parser_match_any(iter, required, sizeof(required) / sizeof(required[0]))))
 	{
@@ -628,7 +628,7 @@ static AstNode* parse_comparee(ListConstIterator* iter)
 {
 	AstNode* node = parse_additive(iter);
 	Token* token;
-	const TokenType required[] = {
+	const LexTokenType required[] = {
 		TT_OP_EQ,
 		TT_OP_NEQ,
 		TT_OP_GT,

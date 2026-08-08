@@ -42,10 +42,10 @@ void PrintTokens(List* list);
 void PrintAst(AstNode* tree);
 void PrintValue(Value* value);
 
-enum TokenType;
+enum LexTokenType;
 enum AstNodeType;
 enum ValueType;
 
-const char* GetTokenTypeString(enum TokenType type);
+const char* GetLexTokenTypeString(enum LexTokenType type);
 const char* GetAstNodeTypeString(enum AstNodeType type);
 const char* GetValueTypeString(enum ValueType type);

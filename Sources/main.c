@@ -4,6 +4,7 @@
 #include <Lexer.h>
 #include <Parser.h>
 #include <Interpreter.h>
+#include <JitCompiler.h>
 #include <List.h>
 
 
@@ -19,7 +20,10 @@ int main(int argc, char* argv[])
 	AstNode* tree = parser_perform(tokens);
 	PrintAst(tree);
 
-	interpreter_perform(NULL, tree);
+	//interpreter_perform(NULL, tree);
+	fn_compiled_entry compiled_main = JIT_compile(tree);
+	unsigned long long result = compiled_main();
+	printf("Result from calling the compiled code: [%llX]\n", result);
 
 	ast_tree_free(tree);
 	list_free(tokens);

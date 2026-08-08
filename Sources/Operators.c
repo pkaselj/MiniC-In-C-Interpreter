@@ -7,7 +7,7 @@
 
 
 // ----------- Public api
-Value operator_impl_unary(TokenType op, Value value)
+Value operator_impl_unary(LexTokenType op, Value value)
 {
 	if (value.type == VT_NUMBER)
 	{
@@ -32,14 +32,14 @@ Value operator_impl_unary(TokenType op, Value value)
 	
 	LogError("operator_impl_unary() - No implementation for operator [%d / %s] and [%d / %s]\n",
 		op,
-		GetTokenTypeString(op),
+		GetLexTokenTypeString(op),
 		value.type,
 		GetValueTypeString(value.type)
 	);
 	exit(-1);
 }
 
-Value operator_impl_binary(TokenType op, Value left, Value right)
+Value operator_impl_binary(LexTokenType op, Value left, Value right)
 {
 
 	if (left.type == VT_NUMBER && right.type == VT_NUMBER)
@@ -77,7 +77,7 @@ Value operator_impl_binary(TokenType op, Value left, Value right)
 
 	LogError("operator_impl_binary() - No implementation for operator [%d / %s] and left [%d / %s], right [%d / %s]\n",
 		op,
-		GetTokenTypeString(op),
+		GetLexTokenTypeString(op),
 		left.type,
 		GetValueTypeString(left.type),
 		right.type,

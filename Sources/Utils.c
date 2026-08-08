@@ -131,7 +131,7 @@ void LogDebug(const char* format, ...)
 
 // -----------------------
 
-const char* GetTokenTypeString(enum TokenType type)
+const char* GetLexTokenTypeString(enum LexTokenType type)
 {
 	switch (type)
 	{
@@ -195,7 +195,7 @@ void _PrintToken(Token* token)
 		return;
 	}
 
-	const char* token_type = GetTokenTypeString(token->type);
+	const char* token_type = GetLexTokenTypeString(token->type);
 	size_t length = token->length;
 
 	char data[256];
@@ -308,12 +308,12 @@ void _PrintAstNode(int indent, AstNode* node)
 		break;
 	case AST_UNARY_EXPR:
 		_PrintAstNode(indent + 1, node->u.unary_expr.child);
-		_PrintIndented(indent + 1, "%s\n", GetTokenTypeString(node->u.unary_expr.op));
+		_PrintIndented(indent + 1, "%s\n", GetLexTokenTypeString(node->u.unary_expr.op));
 		break;
 	case AST_BINARY_EXPR:
 		_PrintAstNode(indent + 1, node->u.binary_expr.left);
 		_PrintAstNode(indent + 1, node->u.binary_expr.right);
-		_PrintIndented(indent + 1, "%s\n", GetTokenTypeString(node->u.binary_expr.op));
+		_PrintIndented(indent + 1, "%s\n", GetLexTokenTypeString(node->u.binary_expr.op));
 		break;
 	case AST_ID_EXPR:
 		_PrintIndented(indent + 1, "%s\n",	node->u.identifier.value.data);

@@ -54,7 +54,7 @@ static Token* tok_create_string(const char* data, size_t length)
 	return token;
 }
 
-static Token* tok_create_operator(TokenType operator, size_t length)
+static Token* tok_create_operator(LexTokenType operator, size_t length)
 {
 	Token* token = _tok_create_empty();
 	token->type = operator;
@@ -71,7 +71,7 @@ static Token* tok_create_number(double number, size_t length)
 	return token;
 }
 
-static Token* tok_create_keyword(TokenType keyword, size_t length)
+static Token* tok_create_keyword(LexTokenType keyword, size_t length)
 {
 	Token* token = _tok_create_empty();
 	token->type = keyword;
@@ -93,7 +93,7 @@ static Token* tok_create_identifier(StringView id)
 	return token;
 }
 
-static Token* tok_create_punctuation(TokenType punctuation, size_t length)
+static Token* tok_create_punctuation(LexTokenType punctuation, size_t length)
 {
 	Token* token = _tok_create_empty();
 	token->type = punctuation;

@@ -9,7 +9,7 @@ typedef struct List List;
 
 // -- Type declarations
 
-typedef enum TokenType
+typedef enum LexTokenType
 {
     TT_NUMBER = 0,
     TT_STRING,
@@ -43,11 +43,11 @@ typedef enum TokenType
     TT_O_BRACE,    // {
     TT_C_BRACE,    // }
     TT_DELIM,      // ;
-} TokenType;
+} LexTokenType;
 
 struct Token
 {
-    TokenType type;
+    LexTokenType type;
 
     union
     {
