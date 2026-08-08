@@ -23,6 +23,25 @@ It is still WIP and it currently implements the following features:
 - Implemented functions. Functions are defined **only at the beginning of the file (before statements)** as follows: `function fname(arg1, arg2, arg3) { expr1; expr2; }` and are called as follows: `fname(1, 2, 3)`. Return value of the function is its last executed statemened - in this case evaluated value of `expr2`.
 - Implemented variables and variable local aliasing - local variables alias global ones. Each function can access its caller's symbols. (for now, maybe remove or keep *closures*).
 
+## JIT Compilation Engine (x86-64)
+
+The project includes an experimental Just-In-Time (JIT) compilation stage written entirely in pure C without external assemblers or codegen libraries. Instead of relying solely on tree-walk interpretation, the pipeline lowers the Abstract Syntax Tree directly into native x86-64 machine code emitted into executable memory pages.
+
+### Currently Implemented
+- **Entry Point Setup:** Correct ABI-compliant function prologue and epilogue handling (`push rbp`, `mov rbp, rsp`, frame cleanup, and `ret`).
+- **Stack-Machine AST Lowering:** Translates binary expression trees into x86-64 stack-based assembly constructs (`push`, `pop`).
+- **Arithmetic Operations:** Full codegen support for basic signed arithmetic:
+  - Addition (`add`)
+  - Subtraction (`sub`)
+  - Multiplication (`imul`)
+
+### Roadmap & Planned Features
+- [ ] Signed division (`idiv`) with `cdq` sign extension and remainder handling.
+- [ ] Comparison operators and flag evaluation (`cmp`, `setcc`).
+- [ ] Flow control and loops (conditional/unconditional relative jumps for `if`, `while`, and `for`).
+- [ ] Function calls and ABI stack alignment.
+- [ ] Local variables and frame pointer relative displacement (`[rbp - offset]`).
+
 ## Grammar EBNF
 
 Currently implemented grammar EBNF:
