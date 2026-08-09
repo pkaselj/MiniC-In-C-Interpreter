@@ -14,7 +14,7 @@
 int main(int argc, char* argv[])
 {
 	//StringView input = sv_create("function a(b, c, d){ b + c * d; } if(x) { y  = 4; } else { y = 5; }");
-	StringView input = sv_create("function fn1(){3+4*4;} function fn2(){10-3*2;} 3;");
+	StringView input = sv_create("function fn1(){3+4*4;} function fn2(){10-3*2;} fn1();");
 	LogInfo("Program input: '%s'\n", input.data);
 
 	List* tokens = lexer_perform(input);

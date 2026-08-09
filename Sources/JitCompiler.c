@@ -326,6 +326,28 @@ void _jit_exe_register_symbol(executable* exe, const StringView sym_id)
 	list_push(exe->symbol_table, n);
 }
 
+const char* _jit_exe_get_function_entry_point(executable* exe, const StringView sym_id)
+{
+	assert(exe);
+	assert(!sv_is_empty(sym_id));
+
+	const char* sym_entry = NULL;
+
+	ListConstIterator* it = list_create_iterator(exe->symbol_table);
+	for (; list_iterator_valid(it); list_iterator_advance(it))
+	{
+		symbol* sym = (symbol*)list_iterator_get(it);
+		if (sv_equal(sym_id, sym->sym_id))
+		{
+			sym_entry = sym->sym_entry_point;
+			break;
+		}
+	}
+	list_free_iterator(it);
+
+	return sym_entry;
+}
+
 void _jit_exe_dump_symbol_table(executable* exe)
 {
 	assert(exe);
@@ -343,6 +365,7 @@ void _jit_exe_dump_symbol_table(executable* exe)
 			sym->sym_entry_point,
 			(sym->sym_entry_point - exe->page_base));
 	}
+	list_free_iterator(it);
 	printf("====== [            ] ======\n");
 
 }
@@ -577,6 +600,27 @@ void _jit_compile_binary_expression(AstNode* tree, executable* exe)
 	_amd64_emit_push_r64(exe, REG_RAX);
 }
 
+void _jit_compile_function_call_expression(AstNode* tree, executable* exe)
+{
+	assert(exe);
+	assert(tree);
+	assert(tree->type == AST_FN_CALL_EXPR);
+
+	// TODO: For now only functions without arguments
+
+	const char* sym_entry = _jit_exe_get_function_entry_point(exe, tree->u.fn_call.symbol->u.string.value);
+	if (!sym_entry)
+	{
+		StringView id = tree->u.fn_call.symbol->u.string.value;
+		LogError("[JIT] :: _jit_compile_function_call_expression() - could not find symbol [%.s]\n",
+			(int)id.size,
+			id.data);
+		// BREAK?
+	}
+
+
+}
+
 void _jit_compile_statement(AstNode* tree, executable* exe)
 {
 	assert(exe);
@@ -590,6 +634,9 @@ void _jit_compile_statement(AstNode* tree, executable* exe)
 		break;
 	case AST_NUM_EXPR:
 		_jit_compile_numeric_expression(tree, exe);
+		break;
+	case AST_FN_CALL_EXPR:
+		_jit_compile_function_call_expression(tree, exe);
 		break;
 	default:
 		LogError("JIT :: _jit_compile_statement() - cannot handle node type [%d / %s]\n", tree->type, GetAstNodeTypeString(tree->type));
