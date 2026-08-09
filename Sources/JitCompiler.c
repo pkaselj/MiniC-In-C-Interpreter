@@ -607,6 +607,15 @@ void _amd64_emit_add_r64_r64(executable* exe, enu_register r64_0, enu_register r
 	_jit_exe_w8(exe, _MODRM(MOD_RR, r64_1, r64_0));
 }
 
+// reg64_0 <- (reg64_0 + imm32_1)
+void _amd64_emit_add_r64_imm32(executable* exe, enu_register reg64_0, uint32_t imm32_1)
+{
+	_jit_exe_w8(exe, _REX(1, 0, 0, 0));
+	_jit_exe_w8(exe, 0x81);
+	_jit_exe_w8(exe, _MODRM(MOD_RR, 0, reg64_0));
+	_jit_exe_w32(exe, imm32_1);
+}
+
 // r64_0 <- r64_0 - r64_1
 void _amd64_emit_sub_r64_r64(executable* exe, enu_register r64_0, enu_register r64_1)
 {
@@ -622,6 +631,15 @@ void _amd64_emit_imul_r64_r64(executable* exe, enu_register r64_0, enu_register 
 	_jit_exe_w8(exe, 0x0F);
 	_jit_exe_w8(exe, 0xAF);
 	_jit_exe_w8(exe, _MODRM(MOD_RR, r64_0, r64_1));
+}
+
+// reg64_0 <- (reg64_0 - imm32_1)
+void _amd64_emit_sub_r64_imm32(executable* exe, enu_register r64_0, uint32_t imm32_1)
+{
+	_jit_exe_w8(exe, _REX(1, 0, 0, 0));
+	_jit_exe_w8(exe, 0x81);
+	_jit_exe_w8(exe, _MODRM(MOD_RR, 5, r64_0));
+	_jit_exe_w32(exe, imm32_1);
 }
 
 // Encodes SUB RSP, 0xDEADBEEF and returns the pointer to 0xDEADBEEF to be overwritten
@@ -644,6 +662,13 @@ uint32_t* _amd64_emit_sub_rsp_imm32_placeholder(executable* exe)
 void _amd64_emit_int3(executable* exe)
 {
 	_jit_exe_w8(exe, 0xCC);
+}
+
+// CALL r64_0
+void _amd64_emit_call_r64_near(executable* exe, enu_register r64_0)
+{
+	_jit_exe_w8(exe, 0xFF);
+	_jit_exe_w8(exe, _MODRM(MOD_RR, 2, r64_0));
 }
 
 // --------------------------------------------
@@ -744,7 +769,19 @@ void _jit_compile_function_call_expression(AstNode* tree, executable* exe)
 		// BREAK?
 	}
 
+	// We assume preallocated size for local vars up to now is aligned to 16B
 
+	// TODO: Save volatile registers
+	// Allocate 32B shadow space
+	_amd64_emit_sub_r64_imm32(exe, REG_RSP, 32);
+
+	_amd64_emit_mov_r64_imm64(exe, REG_RAX, sym_entry);
+	_amd64_emit_call_r64_near(exe, REG_RAX);
+
+	// Restore shadow space
+	_amd64_emit_sub_r64_imm32(exe, REG_RSP, 32);
+	// TODO: Restore volatile registers
+	
 }
 
 // NOTE: By convention RAX register is used to store last statement's value
@@ -804,7 +841,20 @@ void _jit_compile_function_definition(AstNode* tree, executable* exe)
 	// After compiling the function and registering all local variables,
 	// calculate total size and replace placeholder in preallocation step
 	// at the beginning of the function.
-	*local_prealloc_size_ptr = (uint32_t)_jit_exe_get_size_of_local_variables(exe);
+	size_t preallocated_locals_size = _jit_exe_get_size_of_local_variables(exe);
+
+	// Before any function calls, we need 16-Byte aligned stack
+	// In addition to preallocating size for local variables
+	// add padding to align the stack to 16B.
+
+	// Now we need to weatch out for stack modification.
+	// Beware that any stack modifications must be undone or 
+	// aligned to 16B before any function call
+
+	size_t preallocated_aligned = (preallocated_locals_size + 8 /*RBP on stack*/);
+	preallocated_aligned += ( 16 - (preallocated_aligned % 16)) % 16; // TODO: power of 2 trick
+
+	*local_prealloc_size_ptr = (uint32_t)preallocated_aligned;
 
 	// Restore old symbol
 	exe->current_symbol = old_sym;
