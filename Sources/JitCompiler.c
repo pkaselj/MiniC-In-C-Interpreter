@@ -284,6 +284,15 @@ executable* _jit_exe_initialize()
 	return exe;
 }
 
+void _jit_exe_flush_instruction_cache(executable* exe)
+{
+	assert(exe);
+	assert(exe->page_base);
+
+	BOOL bSuccess = FlushInstructionCache(GetCurrentProcess(), exe->page_base, exe->current_size);
+	assert(bSuccess);
+}
+
 void _jit_exe_free(executable* exe)
 {
 	if (exe)
@@ -544,6 +553,7 @@ fn_compiled_entry JIT_compile(AstNode* tree)
 
 
 	_jit_compile_program(tree, exe);
+	_jit_exe_flush_instruction_cache(exe);
 
 	// TODO: Make page executable
 	_jit_exe_dump_file(exe, "S:\\output.bin");
