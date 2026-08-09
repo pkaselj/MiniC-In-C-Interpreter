@@ -684,10 +684,9 @@ void _amd64_util_emit_call_rel32_from_abs(executable* exe, unsigned char* abs_sy
 	// so we add 5B for this CALL instruction
 	unsigned char* base = exe->current_pos + 5;
 
-	long long offset = (long long)abs_sym_entry;
-	offset -= (long long)base;
+	int64_t offset = (int64_t)abs_sym_entry - (int64_t)base;
 	
-	uint32_t encoded_offset = *(uint32_t*)(&offset);
+	uint32_t encoded_offset = (uint32_t)(int32_t)offset;
 	_amd64_emit_call_rel32(exe, encoded_offset);
 }
 

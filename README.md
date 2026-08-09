@@ -1,8 +1,10 @@
 # MiniC Interpreter in C
-## General
-This project implements an interpreter for a simple toy language inspired by C - written in C without external libraries other than the standard library. The language is dynamically typed LL(1)*-ish* grammar interpreted by a recursive descent parser written in C.
 
-It is still WIP and it currently implements the following features:
+## General
+This project implements an interpreter and an experimental Just-In-Time (JIT) compiler for **MiniC** — a lightweight, dynamically typed C-like toy language written entirely in pure C without any third-party dependencies. It features code generation for Windows Intel x86-64 CPUs.
+
+## Frontend (Lexing and Parsing)
+It is still WIP and it currently implements the following (lexer and parser) features:
 - Arithmetic operations (`+ - * /`) (with proper operator precedence i.e. `2+3*4` parses as `2+(3*4)`)
 - Parentheses `3*(2+3)`
 - Variables (create on assign)
@@ -23,24 +25,30 @@ It is still WIP and it currently implements the following features:
 - Implemented functions. Functions are defined **only at the beginning of the file (before statements)** as follows: `function fname(arg1, arg2, arg3) { expr1; expr2; }` and are called as follows: `fname(1, 2, 3)`. Return value of the function is its last executed statemened - in this case evaluated value of `expr2`.
 - Implemented variables and variable local aliasing - local variables alias global ones. Each function can access its caller's symbols. (for now, maybe remove or keep *closures*).
 
-## JIT Compilation Engine (x86-64)
-
+## Backend (JIT Compilation Engine) (x86-64)
 The project includes an experimental Just-In-Time (JIT) compilation stage written entirely in pure C without external assemblers or codegen libraries. Instead of relying solely on tree-walk interpretation, the pipeline lowers the Abstract Syntax Tree directly into native x86-64 machine code emitted into executable memory pages.
 
 ### Currently Implemented
-- **Entry Point Setup:** Correct ABI-compliant function prologue and epilogue handling (`push rbp`, `mov rbp, rsp`, frame cleanup, and `ret`).
-- **Stack-Machine AST Lowering:** Translates binary expression trees into x86-64 stack-based assembly constructs (`push`, `pop`).
-- **Arithmetic Operations:** Full codegen support for basic signed arithmetic:
+- **Entry Point & Frame Management:** Full ABI-compliant prologue and epilogue handling (`push rbp`, `mov rbp, rsp`, stack frame teardown, and `ret`).
+- **Stack-Machine AST Lowering:** Translates binary expression trees into x86-64 stack-based assembly constructs using `push` and `pop` instructions.
+- **Arithmetic Operations:** Native binary encoding for signed integer arithmetic:
   - Addition (`add`)
   - Subtraction (`sub`)
-  - Multiplication (`imul`)
+  - Signed Multiplication (`imul`)
+- **Local Variables & Stack Preallocation:** Local variable frame layouts with stack space reserved upfront at function entry and accessed via frame pointer relative displacements (`[rbp - offset]`).
+- **Function Definitions & Invocation:**
+  - JIT compilation of function AST nodes into callable native machine code routines.
+  - Windows x64 ABI calling convention support:
+    - **32-byte shadow space (home space)** allocation on the stack before calls.
+    - **16-byte stack frame alignment** maintenance across call boundaries.
 
 ### Roadmap & Planned Features
 - [ ] Signed division (`idiv`) with `cdq` sign extension and remainder handling.
 - [ ] Comparison operators and flag evaluation (`cmp`, `setcc`).
 - [ ] Flow control and loops (conditional/unconditional relative jumps for `if`, `while`, and `for`).
-- [ ] Function calls and ABI stack alignment.
-- [ ] Local variables and frame pointer relative displacement (`[rbp - offset]`).
+- [x] Function calls and ABI stack alignment.
+- [x] Local variables and frame pointer relative displacement (`[rbp - offset]`).
+- [ ] Passing arguments to functions
 
 ## Grammar EBNF
 
@@ -75,111 +83,231 @@ Currently implemented grammar EBNF:
 
 ## Examples
 
-### Lexing and Parsing output
+### JIT Compiler Verbose Log Output
 
 ```
-Program input: 'function a(b, c, d){ b + c * d; } if(x) { y  = 4; } else { y = 5; }'
-
+[INF] :: Program input: 'function fn1(){3+4*4;} function fn2(){10-3*2+4 + fn1();} fn2();'
 [Token type=TT_K_FN length=8 data=]
-[Token type=TT_ID length=1 data=a]
+[Token type=TT_ID length=3 data=fn1]
 [Token type=TT_O_PAREN length=1 data=]
-[Token type=TT_ID length=1 data=b]
-[Token type=TT_K_COMMA length=1 data=]
-[Token type=TT_ID length=1 data=c]
-[Token type=TT_K_COMMA length=1 data=]
-[Token type=TT_ID length=1 data=d]
 [Token type=TT_C_PAREN length=1 data=]
 [Token type=TT_O_BRACE length=1 data=]
-[Token type=TT_ID length=1 data=b]
+[Token type=TT_NUMBER length=1 data=3.000000]
 [Token type=TT_OP_ADD length=1 data=]
-[Token type=TT_ID length=1 data=c]
+[Token type=TT_NUMBER length=1 data=4.000000]
 [Token type=TT_OP_MUL length=1 data=]
-[Token type=TT_ID length=1 data=d]
-[Token type=TT_DELIM length=1 data=]
-[Token type=TT_C_BRACE length=1 data=]
-[Token type=TT_K_IF length=2 data=]
-[Token type=TT_O_PAREN length=1 data=]
-[Token type=TT_ID length=1 data=x]
-[Token type=TT_C_PAREN length=1 data=]
-[Token type=TT_O_BRACE length=1 data=]
-[Token type=TT_ID length=1 data=y]
-[Token type=TT_ASSIGN length=1 data=]
 [Token type=TT_NUMBER length=1 data=4.000000]
 [Token type=TT_DELIM length=1 data=]
 [Token type=TT_C_BRACE length=1 data=]
-[Token type=TT_K_ELSE length=4 data=]
+[Token type=TT_K_FN length=8 data=]
+[Token type=TT_ID length=3 data=fn2]
+[Token type=TT_O_PAREN length=1 data=]
+[Token type=TT_C_PAREN length=1 data=]
 [Token type=TT_O_BRACE length=1 data=]
-[Token type=TT_ID length=1 data=y]
-[Token type=TT_ASSIGN length=1 data=]
-[Token type=TT_NUMBER length=1 data=5.000000]
+[Token type=TT_NUMBER length=2 data=10.000000]
+[Token type=TT_OP_SUB length=1 data=]
+[Token type=TT_NUMBER length=1 data=3.000000]
+[Token type=TT_OP_MUL length=1 data=]
+[Token type=TT_NUMBER length=1 data=2.000000]
+[Token type=TT_OP_ADD length=1 data=]
+[Token type=TT_NUMBER length=1 data=4.000000]
+[Token type=TT_OP_ADD length=1 data=]
+[Token type=TT_ID length=3 data=fn1]
+[Token type=TT_O_PAREN length=1 data=]
+[Token type=TT_C_PAREN length=1 data=]
 [Token type=TT_DELIM length=1 data=]
 [Token type=TT_C_BRACE length=1 data=]
-
+[Token type=TT_ID length=3 data=fn2]
+[Token type=TT_O_PAREN length=1 data=]
+[Token type=TT_C_PAREN length=1 data=]
+[Token type=TT_DELIM length=1 data=]
 AST_S
  AST_FN_DEF_STMT
 .>AST_ID_EXPR
-.. a
-.>AST_ID_EXPR
-.. b
-.>AST_ID_EXPR
-.. c
-.>AST_ID_EXPR
-.. d
+.. fn1
 .>AST_BLOCK_STMT
-.. AST_BINARY_EXPR
-...>AST_ID_EXPR
-.... b
-...>AST_BINARY_EXPR
-.... AST_ID_EXPR
-.....>c
-.... AST_ID_EXPR
-.....>d
-.... TT_OP_MUL
-...>TT_OP_ADD
- AST_IF_STMT
-.>AST_ID_EXPR
-.. x
-.>AST_BLOCK_STMT
-.. AST_ASSIGN_EXPR
-...>AST_ID_EXPR
-.... y
-...>AST_NUM_EXPR
-.... 4.000000
-.>AST_BLOCK_STMT
-.. AST_ASSIGN_EXPR
-...>AST_ID_EXPR
-.... y
-...>AST_NUM_EXPR
-.... 5.000000
-```
-
-```
-Program input: '3*5+15-2;'
-[Token type=TT_NUMBER length=1 data=3.000000]
-[Token type=TT_OP_MUL length=1 data=]
-[Token type=TT_NUMBER length=1 data=5.000000]
-[Token type=TT_OP_ADD length=1 data=]
-[Token type=TT_NUMBER length=2 data=15.000000]
-[Token type=TT_OP_SUB length=1 data=]
-[Token type=TT_NUMBER length=1 data=2.000000]
-[Token type=TT_DELIM length=1 data=]
-AST_S
- AST_BINARY_EXPR
-.>AST_BINARY_EXPR
 .. AST_BINARY_EXPR
 ...>AST_NUM_EXPR
 .... 3.000000
-...>AST_NUM_EXPR
-.... 5.000000
-...>TT_OP_MUL
-.. AST_NUM_EXPR
-...>15.000000
-.. TT_OP_ADD
-.>AST_NUM_EXPR
-.. 2.000000
-.>TT_OP_SUB
-[VT_NUMBER]=28.000000
+...>AST_BINARY_EXPR
+.... AST_NUM_EXPR
+.....>4.000000
+.... AST_NUM_EXPR
+.....>4.000000
+.... TT_OP_MUL
+...>TT_OP_ADD
+ AST_FN_DEF_STMT
+.>AST_ID_EXPR
+.. fn2
+.>AST_BLOCK_STMT
+.. AST_BINARY_EXPR
+...>AST_BINARY_EXPR
+.... AST_BINARY_EXPR
+.....>AST_NUM_EXPR
+...... 10.000000
+.....>AST_BINARY_EXPR
+...... AST_NUM_EXPR
+.......>3.000000
+...... AST_NUM_EXPR
+.......>2.000000
+...... TT_OP_MUL
+.....>TT_OP_SUB
+.... AST_NUM_EXPR
+.....>4.000000
+.... TT_OP_ADD
+...>AST_FN_CALL_EXPR
+.... AST_ID_EXPR
+.....>fn1
+...>TT_OP_ADD
+ AST_FN_CALL_EXPR
+.>AST_ID_EXPR
+.. fn2
+====== [SYMBOL TABLE] ======
+Symbol [0] - Id: [fn1] - Entry Point: [0x2C0AA730000] / offset [0]
+        Local: [] - RBP offset: [-8 / -0x8]
+        Local: [] - RBP offset: [-16 / -0x10]
+Symbol [1] - Id: [fn2] - Entry Point: [0x2C0AA73004F] / offset [4F]
+        Local: [] - RBP offset: [-8 / -0x8]
+        Local: [] - RBP offset: [-16 / -0x10]
+        Local: [] - RBP offset: [-24 / -0x18]
+        Local: [] - RBP offset: [-32 / -0x20]
+Symbol [2] - Id: [_entry] - Entry Point: [0x2C0AA7300D1] / offset [D1]
+====== [            ] ======
+[INF] :: Result from calling the compiled code: [27 / 0x1B]
 ```
+
+### JIT Compiled Code (w\ Hand-added Annotations)
+
+The generate machine code for the following simple toy example:
+
+```
+function fn1()
+{
+    3+4*4;
+}
+
+function fn2()
+{
+    10 - 3 * 2 + 4 + fn1();
+}
+
+fn2();
+```
+can be seen below:
+
+```
+; --- fn1() definition
+; Function prologue
+0:  55                      push   rbp      
+1:  48 89 e5                mov    rbp,rsp
+; Stack preallocation for local variables (16B aligned)
+4:  48 81 ec 20 00 00 00    sub    rsp,0x20 
+; Calcualtion of (3 + 4 * 4) using RAX as accumulator
+; and stack for intermediate values
+b:  48 b8 04 00 00 00 00    movabs rax,0x4
+12: 00 00 00 
+15: 48 89 45 f0             mov    QWORD PTR [rbp-0x10],rax
+19: 48 b8 04 00 00 00 00    movabs rax,0x4
+20: 00 00 00 
+23: 48 8b 4d f0             mov    rcx,QWORD PTR [rbp-0x10]
+27: 48 0f af c1             imul   rax,rcx
+2b: 48 89 45 f8             mov    QWORD PTR [rbp-0x8],rax
+2f: 48 b8 03 00 00 00 00    movabs rax,0x3
+36: 00 00 00 
+39: 48 8b 4d f8             mov    rcx,QWORD PTR [rbp-0x8]
+3d: 48 01 c8                add    rax,rcx
+; Result is stored in RAX, which is the return value for fn1()
+; Function epilogue
+40: 48 89 ec                mov    rsp,rbp
+43: 5d                      pop    rbp
+44: c3                      ret
+; --- End of fn1(), visual separators
+45: cc                      int3
+46: cc                      int3
+47: cc                      int3
+48: cc                      int3
+49: cc                      int3
+4a: cc                      int3
+4b: cc                      int3
+4c: cc                      int3
+4d: cc                      int3
+4e: cc                      int3
+; --- fn2() definition
+; Function prologue
+4f: 55                      push   rbp
+50: 48 89 e5                mov    rbp,rsp
+; Preallocation of local variables on stack w 16B alignemnt
+53: 48 81 ec 30 00 00 00    sub    rsp,0x30
+; Allocating 32B shadow space for function call on Win32x64
+5a: 48 81 ec 20 00 00 00    sub    rsp,0x20
+; Call offset -102 (address resolving glitch shows 0x00)
+61: e8 9a ff ff ff          call   0x0
+; Reclaim shadow space
+66: 48 81 ec 20 00 00 00    sub    rsp,0x20
+; Continue calculating fn2() statements
+6d: 48 89 45 f8             mov    QWORD PTR [rbp-0x8],rax
+71: 48 b8 04 00 00 00 00    movabs rax,0x4
+78: 00 00 00 
+7b: 48 89 45 f0             mov    QWORD PTR [rbp-0x10],rax
+7f: 48 b8 02 00 00 00 00    movabs rax,0x2
+86: 00 00 00 
+89: 48 89 45 e0             mov    QWORD PTR [rbp-0x20],rax
+8d: 48 b8 03 00 00 00 00    movabs rax,0x3
+94: 00 00 00 
+97: 48 8b 4d e0             mov    rcx,QWORD PTR [rbp-0x20]
+9b: 48 0f af c1             imul   rax,rcx
+9f: 48 89 45 e8             mov    QWORD PTR [rbp-0x18],rax
+a3: 48 b8 0a 00 00 00 00    movabs rax,0xa
+aa: 00 00 00 
+ad: 48 8b 4d e8             mov    rcx,QWORD PTR [rbp-0x18]
+b1: 48 29 c8                sub    rax,rcx
+b4: 48 8b 4d f0             mov    rcx,QWORD PTR [rbp-0x10]
+b8: 48 01 c8                add    rax,rcx
+bb: 48 8b 4d f8             mov    rcx,QWORD PTR [rbp-0x8]
+bf: 48 01 c8                add    rax,rcx
+; Return value of last expression stored in RAX
+; Function epilogue
+c2: 48 89 ec                mov    rsp,rbp
+c5: 5d                      pop    rbp
+; --- End of fn2(), visual separators
+c6: c3                      ret
+c7: cc                      int3
+c8: cc                      int3
+c9: cc                      int3
+ca: cc                      int3
+cb: cc                      int3
+cc: cc                      int3
+cd: cc                      int3
+ce: cc                      int3
+cf: cc                      int3
+d0: cc                      int3
+; --- Compiled program entry point
+; Function prologue
+d1: 55                      push   rbp
+d2: 48 89 e5                mov    rbp,rsp
+; Body of the main function
+d5: 48 81 ec 20 00 00 00    sub    rsp,0x20
+; Call offset -145
+dc: e8 6e ff ff ff          call   0x4f
+e1: 48 81 ec 20 00 00 00    sub    rsp,0x20
+; Function epilogue
+e8: 48 89 ec                mov    rsp,rbp
+eb: 5d                      pop    rbp
+ec: c3                      ret
+; --- End of entry point function,
+;     return control to external code (caller)
+ed: cc                      int3
+ee: cc                      int3
+ef: cc                      int3
+f0: cc                      int3
+f1: cc                      int3
+f2: cc                      int3
+f3: cc                      int3
+f4: cc                      int3
+f5: cc                      int3
+f6: cc                      int3
+```
+- * Disassembly was obtained using the [defuse.ca Disassembler](https://defuse.ca/online-x86-assembler.htm)
 
 ### Interactive / REPL Example (from Python example)
 
@@ -424,4 +552,4 @@ Implement in future:
 - [x] File execution
 - [ ] Function validation pass - referencing non-existing symbols
 - [ ] Scientific notation numbers
-- [ ] owned String destructor
+- [x] owned String destructor
