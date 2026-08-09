@@ -8,6 +8,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <assert.h>
+#include <stdlib.h>
 
 StringView sv_create(const char* data)
 {
@@ -30,6 +31,23 @@ StringView sv_create_s(const char* data, size_t length)
 		.data = data,
 		.size = length
 	};
+}
+
+String sv_create_copy(const StringView sv)
+{
+	String s = sv_create_empty();
+
+	if (!sv.data || sv.size == 0)
+	{
+		return s;
+	}
+
+	s.data = (char*)malloc(sv.size + 1);
+	memcpy((char*)s.data, sv.data, sv.size);
+	((char*)s.data)[sv.size] = '\0';
+	s.size = sv.size;
+
+	return s;
 }
 
 StringView sv_substring(const StringView sv, size_t index_start, size_t length)
@@ -70,6 +88,16 @@ StringView sv_create_empty()
 		.data = NULL,
 		.size = 0
 	};
+}
+
+void sv_free(String sv)
+{
+	if (sv.data)
+	{
+		free(sv.data);
+		sv.data = NULL;
+	}
+	sv.size = 0;
 }
 
 bool sv_begins_with(const StringView sv, const StringView match)

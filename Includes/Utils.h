@@ -20,12 +20,14 @@ typedef struct StringView String;
 
 StringView sv_create(const char* data);
 StringView sv_create_s(const char* data, size_t length);
+String sv_create_copy(const StringView sv);
 StringView sv_substring(const StringView sv, size_t index_start, size_t length);
 StringView sv_substring_to_end(const StringView sv, size_t index_start);
 bool sv_begins_with(const StringView sv, const StringView match);
 bool sv_equal(const StringView sv, const StringView match);
 bool sv_is_empty(const StringView sv);
 StringView sv_create_empty();
+void sv_free(String sv);
 
 // -------------- Error Logging
 

@@ -263,6 +263,12 @@ typedef enum _enu_register
 
 // --------------------------------------------
 
+typedef struct _symbol
+{
+	String sym_id;
+	const char* sym_entry_point;
+} symbol;
+
 typedef struct _executable
 {
 	unsigned char* page_base;
@@ -270,6 +276,7 @@ typedef struct _executable
 	unsigned char* current_pos;
 	size_t max_size;
 	size_t current_size;
+	List* symbol_table; // List<symbol>
 } executable;
 
 executable* _jit_exe_initialize()
@@ -282,8 +289,62 @@ executable* _jit_exe_initialize()
 	exe->current_pos = exe->page_base;
 	exe->entry_point = NULL;
 	exe->current_size = 0;
+	exe->symbol_table = list_create();
 
 	return exe;
+}
+
+void _jit_exe_free(executable* exe)
+{
+	if (exe)
+	{
+		list_free(exe->symbol_table);
+		memset(exe, 0, sizeof(executable));
+		free(exe);
+	}
+}
+
+void __jit_symbol_dtor(void* sym)
+{
+	symbol* sym2 = (symbol*)sym;
+	sv_free(sym2->sym_id);
+	sym2->sym_entry_point = NULL;
+	free(sym2);
+}
+
+void _jit_exe_register_symbol(executable* exe, const StringView sym_id)
+{
+	assert(exe);
+	assert(exe->symbol_table);
+
+	symbol* sym = (symbol*)malloc(sizeof(symbol));
+	assert(sym);
+	sym->sym_entry_point = exe->current_pos;
+	sym->sym_id = sv_create_copy(sym_id);
+
+	ListNode* n = list_create_node(sym, __jit_symbol_dtor);
+	list_push(exe->symbol_table, n);
+}
+
+void _jit_exe_dump_symbol_table(executable* exe)
+{
+	assert(exe);
+	assert(exe->symbol_table);
+
+	printf("====== [SYMBOL TABLE] ======\n");
+	ListConstIterator* it = list_create_iterator(exe->symbol_table);
+	for (int i = 0; list_iterator_valid(it); list_iterator_advance(it), i++)
+	{
+		symbol* sym = (symbol*)list_iterator_get(it);
+		printf("Symbol [%d] - Id: [%.*s] - Entry Point: [0x%llX] / offset [%llX]\n",
+			i,
+			(int)sym->sym_id.size,
+			sym->sym_id.data,
+			sym->sym_entry_point,
+			(sym->sym_entry_point - exe->page_base));
+	}
+	printf("====== [            ] ======\n");
+
 }
 
 void _jit_exe_flush_instruction_cache(executable* exe)
@@ -301,16 +362,10 @@ void _jit_exe_register_entry_point(executable* exe)
 	assert(exe->page_base);
 	assert(exe->current_pos);
 
-	exe->entry_point = exe->current_pos;
-}
+	StringView id = sv_create("_entry");
+	_jit_exe_register_symbol(exe, id);
 
-void _jit_exe_free(executable* exe)
-{
-	if (exe)
-	{
-		memset(exe, 0, sizeof(executable));
-		free(exe);
-	}
+	exe->entry_point = exe->current_pos;
 }
 
 void _jit_exe_w8(executable* exe, uint8_t byte)
@@ -549,7 +604,7 @@ void _jit_compile_function_definition(AstNode* tree, executable* exe)
 	assert(tree->type == AST_FN_DEF_STMT);
 
 	// TODO: Symbol table
-
+	_jit_exe_register_symbol(exe, tree->u.fn_def.symbol->u.string.value);
 	_jit_compile_function_prologue(exe);
 
 	// Guard value for return, in case body is empty
@@ -626,6 +681,8 @@ fn_compiled_entry JIT_compile(AstNode* tree)
 
 	_jit_compile_program(tree, exe);
 	_jit_exe_flush_instruction_cache(exe);
+
+	_jit_exe_dump_symbol_table(exe);
 
 	// TODO: Make page executable
 	_jit_exe_dump_file(exe, "S:\\output.bin");
