@@ -263,10 +263,17 @@ typedef enum _enu_register
 
 // --------------------------------------------
 
+typedef struct _local
+{
+	String loc_id;
+	size_t rbp_offset; // Absolute value, offset from rbp is always negative
+} local;
+
 typedef struct _symbol
 {
 	String sym_id;
 	const char* sym_entry_point;
+	List* locals; // List<local>, list of local variables
 } symbol;
 
 typedef struct _executable
@@ -277,6 +284,7 @@ typedef struct _executable
 	size_t max_size;
 	size_t current_size;
 	List* symbol_table; // List<symbol>
+	NONOWNING symbol* current_symbol;
 } executable;
 
 executable* _jit_exe_initialize()
@@ -290,6 +298,7 @@ executable* _jit_exe_initialize()
 	exe->entry_point = NULL;
 	exe->current_size = 0;
 	exe->symbol_table = list_create();
+	exe->current_symbol = NULL;
 
 	return exe;
 }
@@ -306,13 +315,17 @@ void _jit_exe_free(executable* exe)
 
 void __jit_symbol_dtor(void* sym)
 {
+	if (!sym)
+		return;
+
 	symbol* sym2 = (symbol*)sym;
 	sv_free(sym2->sym_id);
 	sym2->sym_entry_point = NULL;
+	list_free(sym2->locals);
 	free(sym2);
 }
 
-void _jit_exe_register_symbol(executable* exe, const StringView sym_id)
+NONOWNING symbol* _jit_exe_register_symbol(executable* exe, const StringView sym_id)
 {
 	assert(exe);
 	assert(exe->symbol_table);
@@ -321,9 +334,44 @@ void _jit_exe_register_symbol(executable* exe, const StringView sym_id)
 	assert(sym);
 	sym->sym_entry_point = exe->current_pos;
 	sym->sym_id = sv_create_copy(sym_id);
+	sym->locals = list_create();
 
 	ListNode* n = list_create_node(sym, __jit_symbol_dtor);
 	list_push(exe->symbol_table, n);
+
+	return sym; // NONOWNING ref
+}
+
+void __jit_local_dtor(void* loc)
+{
+	if (!loc)
+		return;
+
+	local* loc2 = (local*)loc;
+
+	sv_free(loc2->loc_id);
+	loc2->rbp_offset = 0;
+
+	free(loc);
+}
+
+NONOWNING local* _jit_exe_allocate_local_variable(executable* exe) // TODO: Implement named variables
+{
+	assert(exe);
+	assert(exe->current_symbol);
+	assert(exe->current_symbol->locals);
+
+	local* loc = (local*)malloc(sizeof(local));
+	assert(loc);
+	loc->loc_id = sv_create_empty(); // unnamed var
+
+	size_t var_count = list_size(exe->current_symbol->locals);
+	loc->rbp_offset = (var_count + 1) * 8; // Starts on 8 (first var is [rbp - 8], assumes all vars are 64-bit
+
+	ListNode* n = list_create_node(loc, __jit_local_dtor);
+	list_push(exe->current_symbol->locals, n);
+
+	return loc; // NONWONING ref
 }
 
 const char* _jit_exe_get_function_entry_point(executable* exe, const StringView sym_id)
@@ -348,6 +396,16 @@ const char* _jit_exe_get_function_entry_point(executable* exe, const StringView 
 	return sym_entry;
 }
 
+size_t _jit_exe_get_size_of_local_variables(executable* exe)
+{
+	assert(exe);
+	assert(exe->current_symbol);
+	assert(exe->current_symbol->locals);
+
+	// Return 8 Bytes for each local variable
+	return 8 * list_size(exe->current_symbol->locals);
+}
+
 void _jit_exe_dump_symbol_table(executable* exe)
 {
 	assert(exe);
@@ -364,6 +422,14 @@ void _jit_exe_dump_symbol_table(executable* exe)
 			sym->sym_id.data,
 			sym->sym_entry_point,
 			(sym->sym_entry_point - exe->page_base));
+		
+		ListConstIterator* it_loc = list_create_iterator(sym->locals);
+		for (size_t j = 0; list_iterator_valid(it_loc); list_iterator_advance(it_loc), j++)
+		{
+			local* loc = (local*)list_iterator_get(it_loc);
+			printf("\tLocal: [%.*s] - RBP offset: [-%u / -0x%X]\n", (int)loc->loc_id.size, loc->loc_id.data, loc->rbp_offset, loc->rbp_offset);
+		}
+		list_free_iterator(it_loc);
 	}
 	list_free_iterator(it);
 	printf("====== [            ] ======\n");
@@ -379,16 +445,18 @@ void _jit_exe_flush_instruction_cache(executable* exe)
 	assert(bSuccess);
 }
 
-void _jit_exe_register_entry_point(executable* exe)
+NONOWNING symbol* _jit_exe_register_entry_point(executable* exe)
 {
 	assert(exe);
 	assert(exe->page_base);
 	assert(exe->current_pos);
 
 	StringView id = sv_create("_entry");
-	_jit_exe_register_symbol(exe, id);
+	symbol* sym = _jit_exe_register_symbol(exe, id);
 
 	exe->entry_point = exe->current_pos;
+
+	return sym; // NONOWNING ref
 }
 
 void _jit_exe_w8(executable* exe, uint8_t byte)
@@ -479,6 +547,40 @@ void _amd64_emit_mov_r64_r64(executable* exe, enu_register r64_0, enu_register r
 	_jit_exe_w8(exe, _MODRM(MOD_RR, r64_1 /*op2*/, r64_0/*op1*/));
 }
 
+// [R(rbase) + scale * R(rindex)] <- r64_1
+void _amd64_emit_mov_m64_r64_disp8(executable* exe, enu_register r64_1, enu_register rbase, enu_sib_scale scale, enu_register rindex, uint8_t disp8)
+{
+	_jit_exe_w8(exe, _REX(1, 0, 0, 0)); // REX.W
+	_jit_exe_w8(exe, 0x89);
+	_jit_exe_w8(exe, _MODRM(MOD_O8, r64_1 /*op2*/, rbase));
+	_jit_exe_w8(exe, disp8);
+}
+
+void _amd64_util_emit_store_local(executable* exe, enu_register dest, uint32_t local_offset)
+{
+	uint8_t offset = _BYTE_OF(local_offset, 0);
+	offset = (uint8_t)(-offset); // Two's complement
+
+	_amd64_emit_mov_m64_r64_disp8(exe, dest, REG_RBP, SIB_S_1, REG_SIB_NO_REG, offset);
+}
+
+// r64_0 <- [R(rbase) + scale * R(rindex) + disp8]
+void _amd64_emit_mov_r64_m64_disp8(executable* exe, enu_register r64_0, enu_register rbase, enu_sib_scale scale, enu_register rindex, uint8_t disp8)
+{
+	_jit_exe_w8(exe, _REX(1, 0, 0, 0)); // REX.W
+	_jit_exe_w8(exe, 0x8B);
+	_jit_exe_w8(exe, _MODRM(MOD_O8, r64_0 /*op2*/, rbase));
+	_jit_exe_w8(exe, disp8);
+}
+
+void _amd64_util_emit_load_local(executable* exe, enu_register dest, uint32_t local_offset)
+{
+	uint8_t offset = _BYTE_OF(local_offset, 0);
+	offset = (uint8_t)(-offset); // Two's complement
+
+	_amd64_emit_mov_r64_m64_disp8(exe, dest, REG_RBP, SIB_S_1, REG_SIB_NO_REG, offset);
+}
+
 void _amd64_emit_pop_r64(executable* exe, enu_register r64_0)
 {
 	_jit_exe_w8(exe, 0x58 + r64_0);
@@ -522,6 +624,23 @@ void _amd64_emit_imul_r64_r64(executable* exe, enu_register r64_0, enu_register 
 	_jit_exe_w8(exe, _MODRM(MOD_RR, r64_0, r64_1));
 }
 
+// Encodes SUB RSP, 0xDEADBEEF and returns the pointer to 0xDEADBEEF to be overwritten
+// later by calculated offset
+uint32_t* _amd64_emit_sub_rsp_imm32_placeholder(executable* exe)
+{
+	unsigned char* placeholder = NULL;
+
+	_jit_exe_w8(exe, _REX(1, 0, 0, 0));
+	_jit_exe_w8(exe, 0x81);
+	_jit_exe_w8(exe, _MODRM(MOD_RR, 5, REG_RSP));
+
+	placeholder = exe->current_pos;
+
+	_jit_exe_w32(exe, 0xDEADBEEF);
+
+	return (uint32_t*)placeholder;
+}
+
 void _amd64_emit_int3(executable* exe)
 {
 	_jit_exe_w8(exe, 0xCC);
@@ -560,7 +679,7 @@ void _jit_compile_numeric_expression(AstNode* tree, executable* exe)
 	assert(tree->type == AST_NUM_EXPR);
 
 	uint64_t imm64_0 = (uint64_t)tree->u.number.value; // TODO: Cast to uint64 for now
-	_amd64_emit_push_imm64(exe, imm64_0);
+	_amd64_emit_mov_r64_imm64(exe, REG_RAX, imm64_0); // Store value in RAX (accumulator register)
 }
 
 void _jit_compile_binary_expression(AstNode* tree, executable* exe)
@@ -572,12 +691,19 @@ void _jit_compile_binary_expression(AstNode* tree, executable* exe)
 	AstNode* left = tree->u.binary_expr.left;
 	AstNode* right = tree->u.binary_expr.right;
 
-	_jit_compile_statement(left, exe); // TODO: Not sure if i would use compile statement or expression?
-	_jit_compile_statement(right, exe); // TODO: Not sure if i would use compile statement or expression?
+	local* _l_right = _jit_exe_allocate_local_variable(exe);
 
-	// Last expression pushes result to stack, load to reg for calculation
-	_amd64_emit_pop_r64(exe, REG_RCX); // Pop operand 2 (right)
-	_amd64_emit_pop_r64(exe, REG_RAX); // Pop operand 1 (left)
+	_jit_compile_statement(right, exe); // TODO: Not sure if i would use compile statement or expression?
+	// Result of the operation is kept in accumulator register (RAX)
+	// Store it to a local variable
+	_amd64_util_emit_store_local(exe, REG_RAX, _l_right->rbp_offset);
+
+	_jit_compile_statement(left, exe); // TODO: Not sure if i would use compile statement or expression?
+	// Result of the operation is kept in accumulator register (RAX)
+
+	// Load RHS to RCX
+	_amd64_util_emit_load_local(exe, REG_RCX, _l_right->rbp_offset);
+
 
 	LexTokenType op = tree->u.binary_expr.op;
 	switch (op)
@@ -597,7 +723,7 @@ void _jit_compile_binary_expression(AstNode* tree, executable* exe)
 		break;
 	}
 
-	_amd64_emit_push_r64(exe, REG_RAX);
+	// Result of the operation is kept in accumulator register (RAX)
 }
 
 void _jit_compile_function_call_expression(AstNode* tree, executable* exe)
@@ -621,6 +747,8 @@ void _jit_compile_function_call_expression(AstNode* tree, executable* exe)
 
 }
 
+// NOTE: By convention RAX register is used to store last statement's value
+// TODO: Maybe split statements from expressions, implement 'return'
 void _jit_compile_statement(AstNode* tree, executable* exe)
 {
 	assert(exe);
@@ -650,14 +778,15 @@ void _jit_compile_function_definition(AstNode* tree, executable* exe)
 	assert(tree);
 	assert(tree->type == AST_FN_DEF_STMT);
 
-	// TODO: Symbol table
-	_jit_exe_register_symbol(exe, tree->u.fn_def.symbol->u.string.value);
+	// Save current symbol
+	symbol* old_sym = exe->current_symbol;
+
+	exe->current_symbol = _jit_exe_register_symbol(exe, tree->u.fn_def.symbol->u.string.value);
+
 	_jit_compile_function_prologue(exe);
 
-	// Guard value for return, in case body is empty
-	// we will return this value from the function
-	// instead of corrupting the stack by popping RBP as return value
-	_amd64_emit_push_imm64(exe, 0xC0FFEEDEADBEEFULL);
+	// Preallocate stack values for local varaibles (placeholder for size, populate later)
+	uint32_t* local_prealloc_size_ptr = _amd64_emit_sub_rsp_imm32_placeholder(exe);
 	
 	ListConstIterator* it = list_create_iterator(tree->u.fn_def.block->u.block.statements);
 	for (;list_iterator_valid(it); list_iterator_advance(it))
@@ -667,10 +796,18 @@ void _jit_compile_function_definition(AstNode* tree, executable* exe)
 	}
 	list_free_iterator(it);
 
-	// TODO: Pop last value (what if there are no values)
-	_amd64_emit_pop_r64(exe, REG_RAX);
+	// Whatever is last written in RAX will be returned
+	// Should be last expression's (statement's) value
 
 	_jit_compile_function_epilogue(exe);
+
+	// After compiling the function and registering all local variables,
+	// calculate total size and replace placeholder in preallocation step
+	// at the beginning of the function.
+	*local_prealloc_size_ptr = (uint32_t)_jit_exe_get_size_of_local_variables(exe);
+
+	// Restore old symbol
+	exe->current_symbol = old_sym;
 }
 
 void _jit_compile_program(AstNode* tree, executable* exe)
@@ -689,14 +826,10 @@ void _jit_compile_program(AstNode* tree, executable* exe)
 
 	// -----------------
 	// Generate entry point for the compiled program
-	_jit_exe_register_entry_point(exe); // Entry point starts here
+	symbol* ep = _jit_exe_register_entry_point(exe); // Entry point starts here
+	exe->current_symbol = ep;
 
 	_jit_compile_function_prologue(exe);
-
-	// Guard value for return, in case body is empty
-	// we will return this value from the function
-	// instead of corrupting the stack by popping RBP as return value
-	_amd64_emit_push_imm64(exe, 0xC0FFEEDEADBEEFULL);
 
 	it = list_create_iterator(tree->u.program.statements);
 	for (;list_iterator_valid(it); list_iterator_advance(it))
@@ -706,11 +839,8 @@ void _jit_compile_program(AstNode* tree, executable* exe)
 	}
 	list_free_iterator(it);
 
-	// TODO: Each statement pushes its value to stack, remove last one
-	// and return it at the end of the program. The problem is when there 
-	// is no expressions i.e. nothing to pop. We will ignore it now, but keep in
-	// mind the program must not be empty. Stupid edge case.
-	_amd64_emit_pop_r64(exe, REG_RAX);
+	// Whatever is last written in RAX will be returned
+	// Should be last expression's (statement's) value
 
 	_jit_compile_function_epilogue(exe);
 }

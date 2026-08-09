@@ -16,6 +16,7 @@ void list_free(TRANSFER List* list);
 // Pops the first token. NULL on empty
 ListNode* list_pop(List* list);
 ListNode* list_peek(List* list);
+size_t list_size(List* list);
 // Pushed to the end.
 void list_push(List* list, TRANSFER ListNode* node);
 // Create list node, destructor can be NULL

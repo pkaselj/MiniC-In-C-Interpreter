@@ -83,6 +83,22 @@ ListNode* list_peek(List* list)
 	return list->first;
 }
 
+size_t list_size(List* list)
+{
+	if (!list)
+		return 0;
+
+	int size = 0;
+	ListConstIterator* it = list_create_iterator(list);
+	for (; list_iterator_valid(it); list_iterator_advance(it))
+	{
+		size++;
+	}
+	list_free_iterator(it);
+
+	return size;
+}
+
 void list_push(List* list, TRANSFER ListNode* node)
 {
 	if (!list || !node)
