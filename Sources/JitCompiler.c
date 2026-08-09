@@ -671,6 +671,26 @@ void _amd64_emit_call_r64_near(executable* exe, enu_register r64_0)
 	_jit_exe_w8(exe, _MODRM(MOD_RR, 2, r64_0));
 }
 
+// CALL rel32
+void _amd64_emit_call_rel32(executable* exe, uint32_t rel32_0)
+{
+	_jit_exe_w8(exe, 0xE8);
+	_jit_exe_w32(exe, rel32_0);
+}
+
+void _amd64_util_emit_call_rel32_from_abs(executable* exe, unsigned char* abs_sym_entry)
+{
+	// Calculate base for call offset, it is start of next instruction
+	// so we add 5B for this CALL instruction
+	unsigned char* base = exe->current_pos + 5;
+
+	long long offset = (long long)abs_sym_entry;
+	offset -= (long long)base;
+	
+	uint32_t encoded_offset = *(uint32_t*)(&offset);
+	_amd64_emit_call_rel32(exe, encoded_offset);
+}
+
 // --------------------------------------------
 
 void _jit_compile_statement(AstNode* tree, executable* exe);
@@ -775,8 +795,7 @@ void _jit_compile_function_call_expression(AstNode* tree, executable* exe)
 	// Allocate 32B shadow space
 	_amd64_emit_sub_r64_imm32(exe, REG_RSP, 32);
 
-	_amd64_emit_mov_r64_imm64(exe, REG_RAX, sym_entry);
-	_amd64_emit_call_r64_near(exe, REG_RAX);
+	_amd64_util_emit_call_rel32_from_abs(exe, sym_entry);
 
 	// Restore shadow space
 	_amd64_emit_sub_r64_imm32(exe, REG_RSP, 32);
