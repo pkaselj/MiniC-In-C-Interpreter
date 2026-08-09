@@ -266,6 +266,7 @@ typedef enum _enu_register
 typedef struct _executable
 {
 	unsigned char* page_base;
+	unsigned char* entry_point;
 	unsigned char* current_pos;
 	size_t max_size;
 	size_t current_size;
@@ -279,6 +280,7 @@ executable* _jit_exe_initialize()
 	exe->max_size = 4096;
 	exe->page_base = VirtualAlloc(NULL, exe->max_size, MEM_COMMIT | MEM_RESERVE, PAGE_EXECUTE_READWRITE);
 	exe->current_pos = exe->page_base;
+	exe->entry_point = NULL;
 	exe->current_size = 0;
 
 	return exe;
@@ -291,6 +293,15 @@ void _jit_exe_flush_instruction_cache(executable* exe)
 
 	BOOL bSuccess = FlushInstructionCache(GetCurrentProcess(), exe->page_base, exe->current_size);
 	assert(bSuccess);
+}
+
+void _jit_exe_register_entry_point(executable* exe)
+{
+	assert(exe);
+	assert(exe->page_base);
+	assert(exe->current_pos);
+
+	exe->entry_point = exe->current_pos;
 }
 
 void _jit_exe_free(executable* exe)
@@ -370,7 +381,7 @@ void _amd64_emit_push_r64(executable* exe, enu_register r64_0)
 void _amd64_emit_push_imm64(executable* exe, uint64_t imm64_0)
 {
 	_amd64_emit_push_imm32(exe, LODWORD(imm64_0));
-	_amd64_emit_mov_m32_imm32_disp8(exe, HIWORD(imm64_0), REG_RSP, SIB_S_1, REG_SIB_NO_REG, 4); // [RSP + 4] <- HIWORD(imm64)
+	_amd64_emit_mov_m32_imm32_disp8(exe, HIDWORD(imm64_0), REG_RSP, SIB_S_1, REG_SIB_NO_REG, 4); // [RSP + 4] <- HIWORD(imm64)
 }
 
 void _amd64_emit_mov_m32_imm32_disp8(executable* exe, uint32_t imm32_0, enu_register rbase, enu_sib_scale scale, uint8_t rindex, uint8_t disp8)
@@ -433,28 +444,35 @@ void _amd64_emit_imul_r64_r64(executable* exe, enu_register r64_0, enu_register 
 	_jit_exe_w8(exe, _MODRM(MOD_RR, r64_0, r64_1));
 }
 
+void _amd64_emit_int3(executable* exe)
+{
+	_jit_exe_w8(exe, 0xCC);
+}
+
 // --------------------------------------------
 
 void _jit_compile_statement(AstNode* tree, executable* exe);
 
 // -----------
 
-void _jit_compile_program_prolog(executable* exe)
+void _jit_compile_function_prologue(executable* exe)
 {
 	_amd64_emit_push_r64(exe, REG_RBP);
 	_amd64_emit_mov_r64_r64(exe, REG_RBP, REG_RSP);
 }
 
-void _jit_compile_program_epilog(executable* exe)
+void _jit_compile_function_epilogue(executable* exe)
 {
-	// TODO: Each statement pushes its value to stack, remove last one
-	// and return it at the end of the program. The problem is when there 
-	// is no expressions i.e. nothing to pop. We will ignore it now, but keep in
-	// mind the program must not be empty. Stupid edge case.
-	_amd64_emit_pop_r64(exe, REG_RAX); 
-
+	_amd64_emit_mov_r64_r64(exe, REG_RSP, REG_RBP);
 	_amd64_emit_pop_r64(exe, REG_RBP);
 	_amd64_emit_ret(exe);
+
+	// Visual padding to separate function at first glance
+	// TODO: Function alignment?
+	for (size_t i = 0; i < 10; i++)
+	{
+		_amd64_emit_int3(exe);
+	}
 }
 
 void _jit_compile_numeric_expression(AstNode* tree, executable* exe)
@@ -524,13 +542,22 @@ void _jit_compile_statement(AstNode* tree, executable* exe)
 	}
 }
 
-void _jit_compile_program(AstNode* tree, executable* exe)
+void _jit_compile_function_definition(AstNode* tree, executable* exe)
 {
-	assert(tree->type == AST_S);
+	assert(exe);
+	assert(tree);
+	assert(tree->type == AST_FN_DEF_STMT);
 
-	_jit_compile_program_prolog(exe);
+	// TODO: Symbol table
 
-	ListConstIterator* it = list_create_iterator(tree->u.program.statements);
+	_jit_compile_function_prologue(exe);
+
+	// Guard value for return, in case body is empty
+	// we will return this value from the function
+	// instead of corrupting the stack by popping RBP as return value
+	_amd64_emit_push_imm64(exe, 0xC0FFEEDEADBEEFULL);
+	
+	ListConstIterator* it = list_create_iterator(tree->u.fn_def.block->u.block.statements);
 	for (;list_iterator_valid(it); list_iterator_advance(it))
 	{
 		AstNode* stmt = (AstNode*)list_iterator_get(it);
@@ -538,7 +565,52 @@ void _jit_compile_program(AstNode* tree, executable* exe)
 	}
 	list_free_iterator(it);
 
-	_jit_compile_program_epilog(exe);
+	// TODO: Pop last value (what if there are no values)
+	_amd64_emit_pop_r64(exe, REG_RAX);
+
+	_jit_compile_function_epilogue(exe);
+}
+
+void _jit_compile_program(AstNode* tree, executable* exe)
+{
+	assert(tree->type == AST_S);
+
+	// Generate functions before generating entry point for compiled program
+
+	ListConstIterator* it = list_create_iterator(tree->u.program.function_definitions);
+	for (;list_iterator_valid(it); list_iterator_advance(it))
+	{
+		AstNode* stmt = (AstNode*)list_iterator_get(it);
+		_jit_compile_function_definition(stmt, exe);
+	}
+	list_free_iterator(it);
+
+	// -----------------
+	// Generate entry point for the compiled program
+	_jit_exe_register_entry_point(exe); // Entry point starts here
+
+	_jit_compile_function_prologue(exe);
+
+	// Guard value for return, in case body is empty
+	// we will return this value from the function
+	// instead of corrupting the stack by popping RBP as return value
+	_amd64_emit_push_imm64(exe, 0xC0FFEEDEADBEEFULL);
+
+	it = list_create_iterator(tree->u.program.statements);
+	for (;list_iterator_valid(it); list_iterator_advance(it))
+	{
+		AstNode* stmt = (AstNode*)list_iterator_get(it);
+		_jit_compile_statement(stmt, exe);
+	}
+	list_free_iterator(it);
+
+	// TODO: Each statement pushes its value to stack, remove last one
+	// and return it at the end of the program. The problem is when there 
+	// is no expressions i.e. nothing to pop. We will ignore it now, but keep in
+	// mind the program must not be empty. Stupid edge case.
+	_amd64_emit_pop_r64(exe, REG_RAX);
+
+	_jit_compile_function_epilogue(exe);
 }
 
 
@@ -558,7 +630,8 @@ fn_compiled_entry JIT_compile(AstNode* tree)
 	// TODO: Make page executable
 	_jit_exe_dump_file(exe, "S:\\output.bin");
 	
-	fn_compiled_entry program_entry = (fn_compiled_entry)exe->page_base;
+	fn_compiled_entry program_entry = (fn_compiled_entry)exe->entry_point;
+	assert(program_entry);
 	_jit_exe_free(exe);
 
 	return program_entry; //TODO: Return ptr to compiled function
