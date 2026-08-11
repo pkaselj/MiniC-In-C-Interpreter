@@ -287,6 +287,10 @@ typedef struct _executable
 	NONOWNING symbol* current_symbol;
 } executable;
 
+NONOWNING local* _jit_exe_allocate_local_variable(executable* exe, StringView id);
+
+// -----
+
 executable* _jit_exe_initialize()
 {
 	executable* exe = (executable*)malloc(sizeof(executable));
@@ -355,15 +359,33 @@ void __jit_local_dtor(void* loc)
 	free(loc);
 }
 
-NONOWNING local* _jit_exe_allocate_local_variable(executable* exe) // TODO: Implement named variables
+NONOWNING local* _jit_exe_allocate_local_temporary_variable(executable* exe)
+{
+	StringView id = sv_create_empty();
+	local* var = _jit_exe_allocate_local_variable(exe, id);
+	sv_free(id);
+	return var;
+}
+
+NONOWNING local* _jit_exe_allocate_local_variable(executable* exe, StringView id)
 {
 	assert(exe);
 	assert(exe->current_symbol);
 	assert(exe->current_symbol->locals);
 
+	// TODO: Check if it exists first
+
 	local* loc = (local*)malloc(sizeof(local));
 	assert(loc);
-	loc->loc_id = sv_create_empty(); // unnamed var
+
+	if (!sv_is_empty(id))
+	{
+		loc->loc_id = sv_create_copy(id);
+	}
+	else
+	{
+		loc->loc_id = sv_create_empty();
+	}
 
 	size_t var_count = list_size(exe->current_symbol->locals);
 	loc->rbp_offset = (var_count + 1) * 8; // Starts on 8 (first var is [rbp - 8], assumes all vars are 64-bit
@@ -372,6 +394,35 @@ NONOWNING local* _jit_exe_allocate_local_variable(executable* exe) // TODO: Impl
 	list_push(exe->current_symbol->locals, n);
 
 	return loc; // NONWONING ref
+}
+
+// Returns NULL if doesn't exist
+NONOWNING local* _jit_exe_get_local_variable(executable* exe, StringView id)
+{
+	assert(exe);
+	assert(exe->current_symbol);
+	assert(exe->current_symbol->locals);
+
+	if (sv_is_empty(id))
+	{
+		return NULL;
+	}
+
+	local* var = NULL;
+	ListConstIterator* it = list_create_iterator(exe->current_symbol->locals);
+	for (; list_iterator_valid(it); list_iterator_advance(it))
+	{
+		var = list_iterator_get(it);
+		assert(var);
+		if (sv_equal(var->loc_id, id))
+		{
+			break;
+		}
+		var = NULL;
+	}
+	list_free_iterator(it);
+
+	return var;
 }
 
 const char* _jit_exe_get_function_entry_point(executable* exe, const StringView sym_id)
@@ -726,6 +777,68 @@ void _jit_compile_numeric_expression(AstNode* tree, executable* exe)
 	_amd64_emit_mov_r64_imm64(exe, REG_RAX, imm64_0); // Store value in RAX (accumulator register)
 }
 
+void _jit_compile_identifier(AstNode* tree, executable* exe)
+{
+	assert(exe);
+	assert(tree);
+	assert(tree->type == AST_ID_EXPR);
+
+	StringView id = tree->u.identifier.value;
+
+	if (!exe->current_symbol)
+	{
+		LogError("[JIT] :: _jit_compile_identifier() - Cannot register global/unscoped variables! Id = [%.*s]\n",
+			id.size,
+			id.data);
+		return; // TODO: Exit()
+	}
+
+	local* var = _jit_exe_get_local_variable(exe, id);
+	if (!var)
+	{
+		var = _jit_exe_allocate_local_variable(exe, id);
+		// TODO: Assign default value
+	}
+
+	assert(var);
+
+	_amd64_util_emit_load_local(exe, REG_RAX, var->rbp_offset);
+}
+
+void _jit_compile_assignment(AstNode* tree, executable* exe)
+{
+	assert(exe);
+	assert(tree);
+	assert(tree->type == AST_ASSIGN_EXPR);
+
+	assert(tree->u.assign.left->type == AST_ID_EXPR); // For now support only variable assignment
+	StringView id = tree->u.assign.left->u.identifier.value;
+
+	_jit_compile_statement(tree->u.assign.right, exe); // TODO: or expression ???
+	// Result in RAX
+
+	if (!exe->current_symbol)
+	{
+		LogError("[JIT] :: _jit_compile_assignment() - Cannot register global/unscoped variables! Id = [%.*s]\n",
+			id.size,
+			id.data);
+		return; // TODO: Exit()
+	}
+
+	local* var = _jit_exe_get_local_variable(exe, id);
+	if (!var)
+	{
+		var = _jit_exe_allocate_local_variable(exe, id);
+		// TODO: Assign default value
+	}
+
+	assert(var);
+
+	_amd64_util_emit_store_local(exe, REG_RAX, var->rbp_offset);
+	
+	// Same result propagated in RAX
+}
+
 void _jit_compile_binary_expression(AstNode* tree, executable* exe)
 {
 	assert(exe);
@@ -735,7 +848,7 @@ void _jit_compile_binary_expression(AstNode* tree, executable* exe)
 	AstNode* left = tree->u.binary_expr.left;
 	AstNode* right = tree->u.binary_expr.right;
 
-	local* _l_right = _jit_exe_allocate_local_variable(exe);
+	local* _l_right = _jit_exe_allocate_local_temporary_variable(exe);
 
 	_jit_compile_statement(right, exe); // TODO: Not sure if i would use compile statement or expression?
 	// Result of the operation is kept in accumulator register (RAX)
@@ -820,6 +933,12 @@ void _jit_compile_statement(AstNode* tree, executable* exe)
 		break;
 	case AST_FN_CALL_EXPR:
 		_jit_compile_function_call_expression(tree, exe);
+		break;
+	case AST_ID_EXPR:
+		_jit_compile_identifier(tree, exe);
+		break;
+	case AST_ASSIGN_EXPR:
+		_jit_compile_assignment(tree, exe);
 		break;
 	default:
 		LogError("JIT :: _jit_compile_statement() - cannot handle node type [%d / %s]\n", tree->type, GetAstNodeTypeString(tree->type));
