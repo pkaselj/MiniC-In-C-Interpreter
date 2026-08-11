@@ -196,15 +196,10 @@ fn2();
 can be seen below:
 
 ```
-; --- fn1() definition
-; Function prologue
-0:  55                      push   rbp      
-1:  48 89 e5                mov    rbp,rsp
-; Stack preallocation for local variables (16B aligned)
-4:  48 81 ec 20 00 00 00    sub    rsp,0x20 
-; Calcualtion of (3 + 4 * 4) using RAX as accumulator
-; and stack for intermediate values
-b:  48 b8 04 00 00 00 00    movabs rax,0x4
+0:  55                      push   rbp                          ; Start of fn1(), function prologue
+1:  48 89 e5                mov    rbp,rsp    
+4:  48 81 ec 20 00 00 00    sub    rsp,0x20                     ; Reserve space for local variables and align to 16B
+b:  48 b8 04 00 00 00 00    movabs rax,0x4                      ; Calculate (3 + 4 * 4) using RAX as accumulator
 12: 00 00 00 
 15: 48 89 45 f0             mov    QWORD PTR [rbp-0x10],rax
 19: 48 b8 04 00 00 00 00    movabs rax,0x4
@@ -215,13 +210,10 @@ b:  48 b8 04 00 00 00 00    movabs rax,0x4
 2f: 48 b8 03 00 00 00 00    movabs rax,0x3
 36: 00 00 00 
 39: 48 8b 4d f8             mov    rcx,QWORD PTR [rbp-0x8]
-3d: 48 01 c8                add    rax,rcx
-; Result is stored in RAX, which is the return value for fn1()
-; Function epilogue
-40: 48 89 ec                mov    rsp,rbp
-43: 5d                      pop    rbp
+3d: 48 01 c8                add    rax,rcx                      ; Return value stored in RAX
+40: 48 89 ec                mov    rsp,rbp                      ; Function epilogue
+43: 5d                      pop    rbp                          ; End of fn1(), following visual separator markers
 44: c3                      ret
-; --- End of fn1(), visual separators
 45: cc                      int3
 46: cc                      int3
 47: cc                      int3
@@ -232,20 +224,13 @@ b:  48 b8 04 00 00 00 00    movabs rax,0x4
 4c: cc                      int3
 4d: cc                      int3
 4e: cc                      int3
-; --- fn2() definition
-; Function prologue
-4f: 55                      push   rbp
+4f: 55                      push   rbp                          ; Start of fn2(), function prologue
 50: 48 89 e5                mov    rbp,rsp
-; Preallocation of local variables on stack w 16B alignemnt
-53: 48 81 ec 30 00 00 00    sub    rsp,0x30
-; Allocating 32B shadow space for function call on Win32x64
-5a: 48 81 ec 20 00 00 00    sub    rsp,0x20
-; Call offset -102 (address resolving glitch shows 0x00)
-61: e8 9a ff ff ff          call   0x0
-; Reclaim shadow space
-66: 48 81 ec 20 00 00 00    sub    rsp,0x20
-; Continue calculating fn2() statements
-6d: 48 89 45 f8             mov    QWORD PTR [rbp-0x8],rax
+53: 48 81 ec 30 00 00 00    sub    rsp,0x30                     ; Reserve space for local variables and align to 16B
+5a: 48 81 ec 20 00 00 00    sub    rsp,0x20                     ; Reserve 32B of Windows shadow space
+61: e8 9a ff ff ff          call   0x0                          ; Call fn1() [relative offset]
+66: 48 81 c4 20 00 00 00    add    rsp,0x20                     ; Reclaim shadow space
+6d: 48 89 45 f8             mov    QWORD PTR [rbp-0x8],rax      ; Calculate (10-3*2+4 + fn1()) using RAX as accumulatpr
 71: 48 b8 04 00 00 00 00    movabs rax,0x4
 78: 00 00 00 
 7b: 48 89 45 f0             mov    QWORD PTR [rbp-0x10],rax
@@ -264,12 +249,9 @@ b1: 48 29 c8                sub    rax,rcx
 b4: 48 8b 4d f0             mov    rcx,QWORD PTR [rbp-0x10]
 b8: 48 01 c8                add    rax,rcx
 bb: 48 8b 4d f8             mov    rcx,QWORD PTR [rbp-0x8]
-bf: 48 01 c8                add    rax,rcx
-; Return value of last expression stored in RAX
-; Function epilogue
-c2: 48 89 ec                mov    rsp,rbp
-c5: 5d                      pop    rbp
-; --- End of fn2(), visual separators
+bf: 48 01 c8                add    rax,rcx                      ; Return value stored in RAX
+c2: 48 89 ec                mov    rsp,rbp                      ; Function epilogue
+c5: 5d                      pop    rbp                          ; End of fn2()
 c6: c3                      ret
 c7: cc                      int3
 c8: cc                      int3
@@ -281,31 +263,25 @@ cd: cc                      int3
 ce: cc                      int3
 cf: cc                      int3
 d0: cc                      int3
-; --- Compiled program entry point
-; Function prologue
-d1: 55                      push   rbp
-d2: 48 89 e5                mov    rbp,rsp
-; Body of the main function
-d5: 48 81 ec 20 00 00 00    sub    rsp,0x20
-; Call offset -145
-dc: e8 6e ff ff ff          call   0x4f
-e1: 48 81 ec 20 00 00 00    sub    rsp,0x20
-; Function epilogue
-e8: 48 89 ec                mov    rsp,rbp
-eb: 5d                      pop    rbp
-ec: c3                      ret
-; --- End of entry point function,
-;     return control to external code (caller)
-ed: cc                      int3
-ee: cc                      int3
-ef: cc                      int3
-f0: cc                      int3
-f1: cc                      int3
-f2: cc                      int3
-f3: cc                      int3
+d1: 55                      push   rbp                          ; Start of _entry(), entry point of compiled code
+d2: 48 89 e5                mov    rbp,rsp                      
+d5: 48 81 ec 10 00 00 00    sub    rsp,0x10
+dc: 48 81 ec 20 00 00 00    sub    rsp,0x20
+e3: e8 67 ff ff ff          call   0x4f                         ; Call fn2()
+e8: 48 81 c4 20 00 00 00    add    rsp,0x20
+ef: 48 89 ec                mov    rsp,rbp
+f2: 5d                      pop    rbp                          ; End of _entry()
+f3: c3                      ret
 f4: cc                      int3
 f5: cc                      int3
 f6: cc                      int3
+f7: cc                      int3
+f8: cc                      int3
+f9: cc                      int3
+fa: cc                      int3
+fb: cc                      int3
+fc: cc                      int3
+fd: cc                      int3
 ```
 - * Disassembly was obtained using the [defuse.ca Disassembler](https://defuse.ca/online-x86-assembler.htm)
 
