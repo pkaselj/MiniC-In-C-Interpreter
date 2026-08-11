@@ -899,6 +899,9 @@ void _jit_compile_program(AstNode* tree, executable* exe)
 
 	_jit_compile_function_prologue(exe);
 
+	// Preallocate stack values for local varaibles (placeholder for size, populate later)
+	uint32_t* local_prealloc_size_ptr = _amd64_emit_sub_rsp_imm32_placeholder(exe);
+
 	it = list_create_iterator(tree->u.program.statements);
 	for (;list_iterator_valid(it); list_iterator_advance(it))
 	{
@@ -907,10 +910,28 @@ void _jit_compile_program(AstNode* tree, executable* exe)
 	}
 	list_free_iterator(it);
 
+
 	// Whatever is last written in RAX will be returned
 	// Should be last expression's (statement's) value
-
 	_jit_compile_function_epilogue(exe);
+
+	// After compiling the function and registering all local variables,
+	// calculate total size and replace placeholder in preallocation step
+	// at the beginning of the function.
+	size_t preallocated_locals_size = _jit_exe_get_size_of_local_variables(exe);
+
+	// Before any function calls, we need 16-Byte aligned stack
+	// In addition to preallocating size for local variables
+	// add padding to align the stack to 16B.
+
+	// Now we need to weatch out for stack modification.
+	// Beware that any stack modifications must be undone or 
+	// aligned to 16B before any function call
+
+	size_t preallocated_aligned = (preallocated_locals_size + 8 /*RBP on stack*/);
+	preallocated_aligned += (16 - (preallocated_aligned % 16)) % 16; // TODO: power of 2 trick
+
+	*local_prealloc_size_ptr = (uint32_t)preallocated_aligned;
 }
 
 
