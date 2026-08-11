@@ -797,7 +797,7 @@ void _jit_compile_function_call_expression(AstNode* tree, executable* exe)
 	_amd64_util_emit_call_rel32_from_abs(exe, sym_entry);
 
 	// Restore shadow space
-	_amd64_emit_sub_r64_imm32(exe, REG_RSP, 32);
+	_amd64_emit_add_r64_imm32(exe, REG_RSP, 32);
 	// TODO: Restore volatile registers
 	
 }
