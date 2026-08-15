@@ -29,6 +29,9 @@
 // Upper DoubleWord of a QuadWord
 #define HIDWORD(_Q) ((_Q >> 32) & 0xFFFFFFFF)
 
+// Calculate offset from BASE to DEST (for jumps or calls)
+// butmake sure its encoded in uint32 twos complement 
+#define OFFSET_32B(BASE, DEST) (uint32_t)( (int64_t)DEST - (int64_t)BASE )
 
 // Mask and Left-Shift
 #define _MLS(_V, _M, _S) (( _V & _M ) << _S)
@@ -755,6 +758,53 @@ void _amd64_util_emit_call_rel32_from_abs(executable* exe, unsigned char* abs_sy
 	_amd64_emit_call_rel32(exe, encoded_offset);
 }
 
+void _amd64_emit_jmp_rel32(executable* exe, uint32_t offset)
+{
+	_jit_exe_w8(exe, 0xE9);
+	_jit_exe_w32(exe, offset);
+}
+
+uint32_t* _amd64_util_emit_jmp_rel32_placeholder(executable* exe)
+{
+	_jit_exe_w8(exe, 0xE9);
+
+	uint32_t* placeholder = exe->current_pos;
+	_jit_exe_w32(exe, 0xDEADBEEF);
+
+	return placeholder;
+}
+
+void _amd64_emit_test_rax_rax(executable* exe)
+{
+	_jit_exe_w8(exe, _REX(1, 0, 0, 0));
+	_jit_exe_w8(exe, 0x85);
+	_jit_exe_w8(exe, _MODRM(MOD_RR, REG_RAX, REG_RAX));
+}
+
+typedef enum
+{
+	JCC_JNZ_REL32 = 0x85,
+} enu_jcc_type;
+
+// any of the Jcc instructions like JNZ, JZ, ...
+void _amd64_emit_jcc_rel32(executable* exe, enu_jcc_type jcc, uint32_t offset)
+{
+	_jit_exe_w8(exe, 0x0F);
+	_jit_exe_w8(exe, (uint8_t)jcc);
+	_jit_exe_w32(exe, offset);
+}
+
+uint32_t* _amd64_util_emit_jcc_rel32_placeholder(executable* exe, enu_jcc_type jcc)
+{
+	_jit_exe_w8(exe, 0x0F);
+	_jit_exe_w8(exe, (uint8_t)jcc);
+
+	uint32_t* placeholder = exe->current_pos;
+	_jit_exe_w32(exe, 0xDEADBEEF);
+
+	return placeholder;
+}
+
 // --------------------------------------------
 
 void _jit_compile_statement(AstNode* tree, executable* exe);
@@ -1000,6 +1050,49 @@ void _jit_compile_function_call_expression(AstNode* tree, executable* exe)
 	
 }
 
+void _jit_compile_while_statement(AstNode* tree, executable* exe)
+{
+	assert(exe);
+	assert(tree);
+	assert(tree->type == AST_WHILE_STMT);
+
+	// Tail-jumping loop implementation
+
+	// First jump to condition
+	uint32_t* p1 = _amd64_util_emit_jmp_rel32_placeholder(exe);
+	unsigned char* rip1 = exe->current_pos;
+
+	unsigned char* _loop_body = exe->current_pos;
+	_jit_compile_statement(tree->u.while_stmt.block, exe);
+
+	unsigned char* _loop_test = exe->current_pos;
+	_jit_compile_statement(tree->u.while_stmt.condition, exe);
+	// Result in RAX
+	_amd64_emit_test_rax_rax(exe);
+	// JNZ _lop_body
+	uint32_t* p2 = _amd64_util_emit_jcc_rel32_placeholder(exe, JCC_JNZ_REL32);
+	uint32_t offset_to_body = OFFSET_32B(exe->current_pos, _loop_body);
+	*p2 = offset_to_body;
+	 
+
+	*p1 = OFFSET_32B(rip1, _loop_test);
+}
+
+void _jit_compile_code_block_statement(AstNode* tree, executable* exe)
+{
+	assert(exe);
+	assert(tree);
+	assert(tree->type == AST_BLOCK_STMT);
+
+	ListConstIterator* it = list_create_iterator(tree->u.block.statements);
+	for (;list_iterator_valid(it); list_iterator_advance(it))
+	{
+		AstNode* stmt = (AstNode*)list_iterator_get(it);
+		_jit_compile_statement(stmt, exe);
+	}
+	list_free_iterator(it);
+}
+
 // NOTE: By convention RAX register is used to store last statement's value
 // TODO: Maybe split statements from expressions, implement 'return'
 void _jit_compile_statement(AstNode* tree, executable* exe)
@@ -1024,6 +1117,12 @@ void _jit_compile_statement(AstNode* tree, executable* exe)
 		break;
 	case AST_ASSIGN_EXPR:
 		_jit_compile_assignment(tree, exe);
+		break;
+	case AST_WHILE_STMT:
+		_jit_compile_while_statement(tree, exe);
+		break;
+	case AST_BLOCK_STMT:
+		_jit_compile_code_block_statement(tree, exe);
 		break;
 	default:
 		LogError("JIT :: _jit_compile_statement() - cannot handle node type [%d / %s]\n", tree->type, GetAstNodeTypeString(tree->type));
