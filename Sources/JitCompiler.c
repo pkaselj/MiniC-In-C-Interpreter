@@ -607,12 +607,19 @@ void _amd64_emit_mov_m64_r64_disp8(executable* exe, enu_register r64_1, enu_regi
 	_jit_exe_w8(exe, disp8);
 }
 
-void _amd64_util_emit_store_local(executable* exe, enu_register dest, uint32_t local_offset)
+void _amd64_util_emit_store_local_rsp(executable* exe, enu_register src, uint32_t local_offset)
+{
+	uint8_t offset = _BYTE_OF(local_offset, 0);
+
+	_amd64_emit_mov_m64_r64_disp8(exe, src, REG_RSP, SIB_S_1, REG_SIB_NO_REG, offset);
+}
+
+void _amd64_util_emit_store_local(executable* exe, enu_register src, uint32_t local_offset)
 {
 	uint8_t offset = _BYTE_OF(local_offset, 0);
 	offset = (uint8_t)(-offset); // Two's complement
 
-	_amd64_emit_mov_m64_r64_disp8(exe, dest, REG_RBP, SIB_S_1, REG_SIB_NO_REG, offset);
+	_amd64_emit_mov_m64_r64_disp8(exe, src, REG_RBP, SIB_S_1, REG_SIB_NO_REG, offset);
 }
 
 // r64_0 <- [R(rbase) + scale * R(rindex) + disp8]
@@ -622,6 +629,13 @@ void _amd64_emit_mov_r64_m64_disp8(executable* exe, enu_register r64_0, enu_regi
 	_jit_exe_w8(exe, 0x8B);
 	_jit_exe_w8(exe, _MODRM(MOD_O8, r64_0 /*op2*/, rbase));
 	_jit_exe_w8(exe, disp8);
+}
+
+void _amd64_util_emit_load_local_rsp(executable* exe, enu_register dest, uint32_t local_offset)
+{
+	uint8_t offset = _BYTE_OF(local_offset, 0);
+
+	_amd64_emit_mov_r64_m64_disp8(exe, dest, REG_RSP, SIB_S_1, REG_SIB_NO_REG, offset);
 }
 
 void _amd64_util_emit_load_local(executable* exe, enu_register dest, uint32_t local_offset)
@@ -889,8 +903,6 @@ void _jit_compile_function_call_expression(AstNode* tree, executable* exe)
 	assert(tree);
 	assert(tree->type == AST_FN_CALL_EXPR);
 
-	// TODO: For now only functions without arguments
-
 	const char* sym_entry = _jit_exe_get_function_entry_point(exe, tree->u.fn_call.symbol->u.string.value);
 	if (!sym_entry)
 	{
@@ -903,14 +915,87 @@ void _jit_compile_function_call_expression(AstNode* tree, executable* exe)
 
 	// We assume preallocated size for local vars up to now is aligned to 16B
 
+	size_t argc = list_size(tree->u.fn_call.args);
+	size_t arg_stack_space = 0;
+
+	if (argc > 4)
+	{
+		// For each argument > 4 allocate 8B on stack and align to 16B
+		arg_stack_space += (argc - 4) * 8 + ((argc % 2 != 0) ? 8 : 0 );
+	}
+
 	// TODO: Save volatile registers
-	// Allocate 32B shadow space
-	_amd64_emit_sub_r64_imm32(exe, REG_RSP, 32);
+	// Allocate 32B shadow space + > 4 args
+	arg_stack_space += 32;
+	_amd64_emit_sub_r64_imm32(exe, REG_RSP, arg_stack_space);
+
+	// First of all, compile all arguments because they don't need 
+	// to be simple literals and identifiers, they may be complex
+	// expression that will clobber our argument registers.
+
+	// List of local argument temporary variables in-order
+	List* arg_locals = list_create();
+
+	ListConstIterator* it = list_create_iterator(tree->u.fn_call.args);
+	for (int i = 0;list_iterator_valid(it); list_iterator_advance(it), i++)
+	{
+		AstNode* arg = (AstNode*)list_iterator_get(it);
+
+		local* temp = _jit_exe_allocate_local_temporary_variable(exe);
+
+		ListNode* n = list_create_node(temp, NULL);
+		list_push(arg_locals, n);
+
+		// Function call can be any expression, value of it is now in RAX
+		_jit_compile_statement(arg, exe);
+
+		_amd64_util_emit_store_local(exe, REG_RAX, temp->rbp_offset);
+	}
+	list_free_iterator(it);
+
+	// Load all argument values
+	it = list_create_iterator(arg_locals);
+	for (int i = 0;list_iterator_valid(it); list_iterator_advance(it), i++)
+	{
+		local* arg = list_iterator_get(it);
+		assert(arg); // TODO: Throw error when variable doesn't exist
+
+		switch (i)
+		{
+		case 0:
+			_amd64_util_emit_load_local(exe, REG_RCX, arg->rbp_offset);
+			break;
+
+		case 1:
+			_amd64_util_emit_load_local(exe, REG_RDX, arg->rbp_offset);
+			break;
+
+		case 2:
+			_amd64_util_emit_load_local(exe, REG_R8, arg->rbp_offset);
+			break;
+
+		case 3:
+			_amd64_util_emit_load_local(exe, REG_R9, arg->rbp_offset);
+			break;
+
+		default:
+			// We must use RSP beacuse we don't know how many local vraibles do we have
+			// at this point in this function so we cannot really orient relative to RBP
+			// First argument comes after shadow space
+			uint32_t rsp_offset = 32 + 8 * (i - 4);
+			_amd64_util_emit_load_local(exe, REG_RAX, arg->rbp_offset);
+			_amd64_util_emit_store_local_rsp(exe, REG_RAX, rsp_offset);
+			break;
+		}
+	}
+	list_free_iterator(it);
+
+	list_free(arg_locals);
 
 	_amd64_util_emit_call_rel32_from_abs(exe, sym_entry);
 
 	// Restore shadow space
-	_amd64_emit_add_r64_imm32(exe, REG_RSP, 32);
+	_amd64_emit_add_r64_imm32(exe, REG_RSP, arg_stack_space);
 	// TODO: Restore volatile registers
 	
 }
@@ -962,7 +1047,48 @@ void _jit_compile_function_definition(AstNode* tree, executable* exe)
 	// Preallocate stack values for local varaibles (placeholder for size, populate later)
 	uint32_t* local_prealloc_size_ptr = _amd64_emit_sub_rsp_imm32_placeholder(exe);
 	
-	ListConstIterator* it = list_create_iterator(tree->u.fn_def.block->u.block.statements);
+	// Create local variables for all arguments
+	ListConstIterator* it = list_create_iterator(tree->u.fn_def.params);
+	for (int i = 0;list_iterator_valid(it); list_iterator_advance(it), i++)
+	{
+		AstNode* arg = (AstNode*)list_iterator_get(it);
+		assert(arg->type == AST_ID_EXPR);
+
+		local* loc = _jit_exe_allocate_local_variable(exe, arg->u.identifier.value);
+		assert(loc);
+
+		switch (i)
+		{
+		case 0:
+			_amd64_util_emit_store_local(exe, REG_RCX, loc->rbp_offset);
+			break;
+
+		case 1:
+			_amd64_util_emit_store_local(exe, REG_RDX, loc->rbp_offset);
+			break;
+
+		case 2:
+			_amd64_util_emit_store_local(exe, REG_R8, loc->rbp_offset);
+			break;
+
+		case 3:
+			_amd64_util_emit_store_local(exe, REG_R9, loc->rbp_offset);
+			break;
+
+		default:
+			// First argument comes after shadow space and old RBP
+			uint32_t rbp_offset = 8 /* return address */ + 32 /* shadow space */ + 8 * (i - 4);
+			// Keep in mind, rbp offset now is positive because it technically
+			// lives in callers stack frame
+			assert(rbp_offset < 128); // Because of disp8
+			_amd64_emit_mov_r64_m64_disp8(exe, REG_RAX, REG_RBP, SIB_S_1, REG_SIB_NO_REG, (uint8_t)rbp_offset);
+			_amd64_util_emit_store_local(exe, REG_RAX, loc->rbp_offset);
+			break;
+		}
+	}
+	list_free_iterator(it);
+
+	it = list_create_iterator(tree->u.fn_def.block->u.block.statements);
 	for (;list_iterator_valid(it); list_iterator_advance(it))
 	{
 		AstNode* stmt = (AstNode*)list_iterator_get(it);
