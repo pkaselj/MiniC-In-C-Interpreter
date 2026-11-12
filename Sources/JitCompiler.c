@@ -1018,6 +1018,21 @@ void _jit_compile_binary_expression(AstNode* tree, executable* exe)
 	case TT_OP_LT:
 		_amd64_emit_compare_set_rax_r64_r64(exe, REG_RAX, REG_RCX, SETCC_SETL);
 		break;
+	case TT_OP_LTE:
+		_amd64_emit_compare_set_rax_r64_r64(exe, REG_RAX, REG_RCX, SETCC_SETLE);
+		break;
+	case TT_OP_GT:
+		_amd64_emit_compare_set_rax_r64_r64(exe, REG_RAX, REG_RCX, SETCC_SETG);
+		break;
+	case TT_OP_GTE:
+		_amd64_emit_compare_set_rax_r64_r64(exe, REG_RAX, REG_RCX, SETCC_SETGE);
+		break;
+	case TT_OP_EQ:
+		_amd64_emit_compare_set_rax_r64_r64(exe, REG_RAX, REG_RCX, SETCC_SETE);
+		break;
+	case TT_OP_NEQ:
+		_amd64_emit_compare_set_rax_r64_r64(exe, REG_RAX, REG_RCX, SETCC_SETNE);
+		break;
 	// TODO: More operators, DIV?
 	default:
 		LogError("JIT :: _jit_compile_binary_expression() - cannot handle operator [%d / %s]\n", op, GetLexTokenTypeString(op));

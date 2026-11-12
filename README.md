@@ -29,7 +29,7 @@ It is still WIP and it currently implements the following (lexer and parser) fea
 The project includes an experimental Just-In-Time (JIT) compilation stage written entirely in pure C without external assemblers or codegen libraries. Instead of relying solely on tree-walk interpretation, the pipeline lowers the Abstract Syntax Tree directly into native x86-64 machine code emitted into executable memory pages.
 
 ### Currently Implemented
-- **Entry Point & Frame Management:** Full ABI-compliant prologue and epilogue handling (`push rbp`, `mov rbp, rsp`, stack frame teardown, and `ret`).
+- **Entry Point & Frame Management:** Full Win x64 calling convention ABI-compliant prologue and epilogue handling (`push rbp`, `mov rbp, rsp`, stack frame teardown, and `ret`).
 - **Stack-Machine AST Lowering:** Translates binary expression trees into x86-64 stack-based assembly constructs using `push` and `pop` instructions.
 - **Arithmetic Operations:** Native binary encoding for signed integer arithmetic:
   - Addition (`add`)
@@ -44,11 +44,20 @@ The project includes an experimental Just-In-Time (JIT) compilation stage writte
 
 ### Roadmap & Planned Features
 - [ ] Signed division (`idiv`) with `cdq` sign extension and remainder handling.
-- [ ] Comparison operators and flag evaluation (`cmp`, `setcc`).
+- [x] Comparison operators and flag evaluation (`cmp`, `setcc`).
+- [ ] Logical operators
+    - [ ] `and`
+    - [ ] `or`
+    - [ ] `not`
+    - [ ] `xor`
 - [ ] Flow control and loops (conditional/unconditional relative jumps for `if`, `while`, and `for`).
+    - [x] `while` loops
+    - [ ] `for` loops
+    - [ ] `if` statement block
 - [x] Function calls and ABI stack alignment.
 - [x] Local variables and frame pointer relative displacement (`[rbp - offset]`).
-- [ ] Passing arguments to functions
+- [x] Passing arguments to functions
+- [ ] Calling external C DLLs
 
 ## Grammar EBNF
 
@@ -174,6 +183,12 @@ Symbol [1] - Id: [fn2] - Entry Point: [0x2C0AA73004F] / offset [4F]
 Symbol [2] - Id: [_entry] - Entry Point: [0x2C0AA7300D1] / offset [D1]
 ====== [            ] ======
 [INF] :: Result from calling the compiled code: [27 / 0x1B]
+```
+
+### JIT Exception Handling and Error Output Example
+
+```
+
 ```
 
 ### JIT Compiled Code (w\ Hand-added Annotations)
