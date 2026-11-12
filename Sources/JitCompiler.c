@@ -264,6 +264,7 @@ typedef enum _enu_register
 
 } enu_register;
 
+
 // --------------------------------------------
 
 typedef struct _local
@@ -805,6 +806,82 @@ uint32_t* _amd64_util_emit_jcc_rel32_placeholder(executable* exe, enu_jcc_type j
 	return placeholder;
 }
 
+typedef enum
+{
+	SETCC_SETA = 0x97,
+	SETCC_SETAE = 0x93,
+	SETCC_SETB = 0x92,
+	SETCC_SETBE = 0x96,
+	SETCC_SETC = 0x92,
+	SETCC_SETE = 0x94,
+	SETCC_SETG = 0x9F,
+	SETCC_SETGE = 0x9D,
+	SETCC_SETL = 0x9C,
+	SETCC_SETLE = 0x9E,
+	SETCC_SETNA = 0x96,
+	SETCC_SETNAE = 0x92,
+	SETCC_SETNB = 0x93,
+	SETCC_SETNBE = 0x97,
+	SETCC_SETNC = 0x93,
+	SETCC_SETNE = 0x95,
+	SETCC_SETNG = 0x9E,
+	SETCC_SETNGE = 0x9C,
+	SETCC_SETNL = 0x9D,
+	SETCC_SETNLE = 0x9F,
+	SETCC_SETNO = 0x91,
+	SETCC_SETNP = 0x9B,
+	SETCC_SETNS = 0x99,
+	SETCC_SETNZ = 0x95,
+	SETCC_SETO = 0x90,
+	SETCC_SETP = 0x9A,
+	SETCC_SETPE = 0x9A,
+	SETCC_SETPO = 0x9B,
+	SETCC_SETS = 0x98,
+	SETCC_SETZ = 0x94
+} enu_setcc_type;
+
+// CMP r64_0, r64_1
+void _amd64_emit_cmp_r64_r64(executable* exe, enu_register r64_0, enu_register r64_1)
+{
+	_jit_exe_w8(exe, _REX(1, 0, 0, 0));
+	_jit_exe_w8(exe, 0x39);
+	_jit_exe_w8(exe, _MODRM(MOD_RR, r64_1, r64_0));
+}
+
+// Emits SETcc r8
+// e.g. SETL AL
+void _amd64_emit_setcc_r8(executable* exe, enu_register r8_0, enu_setcc_type setcc)
+{
+	_jit_exe_w8(exe, 0x39);
+	_jit_exe_w8(exe, (uint8_t)setcc);
+	_jit_exe_w8(exe, _MODRM(MOD_RR, 0, r8_0));
+}
+
+// MOVZX RAX, AL
+void _amd64_emit_movzx_rax_al(executable* exe)
+{
+	// Using MOVZX r32, r/m8 instruction
+	// because writing to r32 EAX automatically
+	// zero-extends it to r64 RAX
+	_jit_exe_w8(exe, 0x0F);
+	_jit_exe_w8(exe, 0xB6);
+	_jit_exe_w8(exe, _MODRM(MOD_RR, REG_EAX, REG_AL));
+}
+
+// RAX <- CMP r64_0, r64_1
+void _amd64_emit_compare_set_rax_r64_r64(executable* exe, enu_register r64_0, enu_register r64_1, enu_setcc_type setcc)
+{
+	// Compare r64_0 to r64_1
+	_amd64_emit_cmp_r64_r64(exe, r64_0, r64_1);
+
+	// Set AL register to 1 or 0 depending
+	// on the result and setcc parameter
+	_amd64_emit_setcc_r8(exe, REG_AL, setcc);
+
+	// 64bit zero extend AL into RAX per convetion
+	_amd64_emit_movzx_rax_al(exe);
+}
+
 // --------------------------------------------
 
 void _jit_compile_statement(AstNode* tree, executable* exe);
@@ -938,6 +1015,9 @@ void _jit_compile_binary_expression(AstNode* tree, executable* exe)
 	case TT_OP_MUL:
 		_amd64_emit_imul_r64_r64(exe, REG_RAX, REG_RCX);
 		break;
+	case TT_OP_LT:
+		_amd64_emit_compare_set_rax_r64_r64(exe, REG_RAX, REG_RCX, SETCC_SETL);
+		break;
 	// TODO: More operators, DIV?
 	default:
 		LogError("JIT :: _jit_compile_binary_expression() - cannot handle operator [%d / %s]\n", op, GetLexTokenTypeString(op));
@@ -1062,19 +1142,23 @@ void _jit_compile_while_statement(AstNode* tree, executable* exe)
 	uint32_t* p1 = _amd64_util_emit_jmp_rel32_placeholder(exe);
 	unsigned char* rip1 = exe->current_pos;
 
+	// Section: Loop Body
 	unsigned char* _loop_body = exe->current_pos;
 	_jit_compile_statement(tree->u.while_stmt.block, exe);
 
+	// Section: Loop Condition, first instruction jumps to here
 	unsigned char* _loop_test = exe->current_pos;
 	_jit_compile_statement(tree->u.while_stmt.condition, exe);
 	// Result in RAX
 	_amd64_emit_test_rax_rax(exe);
-	// JNZ _lop_body
+
+	// JNZ _loop_body
 	uint32_t* p2 = _amd64_util_emit_jcc_rel32_placeholder(exe, JCC_JNZ_REL32);
 	uint32_t offset_to_body = OFFSET_32B(exe->current_pos, _loop_body);
+	// If condition is true, jump back to Loop Body 
 	*p2 = offset_to_body;
 	 
-
+	// Populate address for first jump to loop body
 	*p1 = OFFSET_32B(rip1, _loop_test);
 }
 
@@ -1103,25 +1187,25 @@ void _jit_compile_statement(AstNode* tree, executable* exe)
 
 	switch (tree->type)
 	{
-	case AST_BINARY_EXPR:
+	case AST_BINARY_EXPR: // Binary operation, including logic operators
 		_jit_compile_binary_expression(tree, exe);
 		break;
-	case AST_NUM_EXPR:
+	case AST_NUM_EXPR: // Numeric constant
 		_jit_compile_numeric_expression(tree, exe);
 		break;
-	case AST_FN_CALL_EXPR:
+	case AST_FN_CALL_EXPR: // Function Call
 		_jit_compile_function_call_expression(tree, exe);
 		break;
-	case AST_ID_EXPR:
+	case AST_ID_EXPR: // Variable/Symbol
 		_jit_compile_identifier(tree, exe);
 		break;
-	case AST_ASSIGN_EXPR:
+	case AST_ASSIGN_EXPR: // Assignment
 		_jit_compile_assignment(tree, exe);
 		break;
-	case AST_WHILE_STMT:
+	case AST_WHILE_STMT: // While
 		_jit_compile_while_statement(tree, exe);
 		break;
-	case AST_BLOCK_STMT:
+	case AST_BLOCK_STMT: // Code block '{' ... '}'
 		_jit_compile_code_block_statement(tree, exe);
 		break;
 	default:
