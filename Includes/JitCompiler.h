@@ -4,4 +4,4 @@
 
 typedef unsigned long long(*fn_compiled_entry)(void);
 
-fn_compiled_entry JIT_compile(AstNode* tree);
+size_t JIT_compile(AstNode* tree, fn_compiled_entry* pp_entry_point);

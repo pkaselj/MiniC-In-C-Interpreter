@@ -5,6 +5,7 @@
 #include <Parser.h>
 #include <Interpreter.h>
 #include <JitCompiler.h>
+#include <JitException.h>
 #include <List.h>
 
 #define WIN32_LEAN_AND_MEAN
@@ -27,11 +28,13 @@ int main(int argc, char* argv[])
 	PrintAst(tree);
 
 	//interpreter_perform(NULL, tree);
-	fn_compiled_entry compiled_main = JIT_compile(tree);
+	fn_compiled_entry compiled_main = NULL;
+	size_t compiled_size = JIT_compile(tree, &compiled_main);
 
 	DWORD ex = 0;
 	__try
 	{
+		InstallExceptionHandler(compiled_main, compiled_size);
 		unsigned long long result = compiled_main();
 		LogInfo("Result from calling the compiled code: [%llu / 0x%llX]\n", result, result);
 	}
@@ -39,6 +42,8 @@ int main(int argc, char* argv[])
 	{
 		LogError("Failed to execute compiled code. Exception: [%ud / %X]\n", ex, ex);
 	}
+	
+	RemoveExceptionHandler();
 
 	ast_tree_free(tree);
 	list_free(tokens);

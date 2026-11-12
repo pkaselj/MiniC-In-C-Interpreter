@@ -852,7 +852,7 @@ void _amd64_emit_cmp_r64_r64(executable* exe, enu_register r64_0, enu_register r
 // e.g. SETL AL
 void _amd64_emit_setcc_r8(executable* exe, enu_register r8_0, enu_setcc_type setcc)
 {
-	_jit_exe_w8(exe, 0x39);
+	_jit_exe_w8(exe, 0x0F);
 	_jit_exe_w8(exe, (uint8_t)setcc);
 	_jit_exe_w8(exe, _MODRM(MOD_RR, 0, r8_0));
 }
@@ -1136,6 +1136,20 @@ void _jit_compile_while_statement(AstNode* tree, executable* exe)
 	assert(tree);
 	assert(tree->type == AST_WHILE_STMT);
 
+	// TODO: I am thinking of switching to C style language
+	// with explicit return statements and distinction
+	// between expressions and statements. Currently,
+	// statements like for, while and if have the value
+	// of the last evaluated statement of their code blocks.
+	// So i have to manually load result into RAX now.
+	// Especially since i have implemented Tail-jumping loop version.
+	// This is a reminder to remove this line when i switch to
+	// statement/expression syntax.
+	// ---- STATEMENT EXPRESSION - REMOVE LATER
+	local* result = _jit_exe_allocate_local_temporary_variable(exe);
+	assert(result);
+	// ---- STATEMENT EXPRESSION - REMOVE LATER
+
 	// Tail-jumping loop implementation
 
 	// First jump to condition
@@ -1145,6 +1159,9 @@ void _jit_compile_while_statement(AstNode* tree, executable* exe)
 	// Section: Loop Body
 	unsigned char* _loop_body = exe->current_pos;
 	_jit_compile_statement(tree->u.while_stmt.block, exe);
+	// ---- STATEMENT EXPRESSION - REMOVE LATER
+	_amd64_util_emit_store_local(exe, REG_RAX, result->rbp_offset);
+	// ---- STATEMENT EXPRESSION - REMOVE LATER
 
 	// Section: Loop Condition, first instruction jumps to here
 	unsigned char* _loop_test = exe->current_pos;
@@ -1160,6 +1177,11 @@ void _jit_compile_while_statement(AstNode* tree, executable* exe)
 	 
 	// Populate address for first jump to loop body
 	*p1 = OFFSET_32B(rip1, _loop_test);
+
+
+	// ---- STATEMENT EXPRESSION - REMOVE LATER
+	_amd64_util_emit_load_local(exe, REG_RAX, result->rbp_offset);
+	// ---- STATEMENT EXPRESSION - REMOVE LATER
 }
 
 void _jit_compile_code_block_statement(AstNode* tree, executable* exe)
@@ -1365,9 +1387,10 @@ void _jit_compile_program(AstNode* tree, executable* exe)
 
 // --------------------------------------------
 
-fn_compiled_entry JIT_compile(AstNode* tree)
+size_t JIT_compile(AstNode* tree, fn_compiled_entry* pp_entry_point)
 {
 	assert(tree);
+	assert(pp_entry_point);
 	// TODO: Allocate page from OS
 	// for now just ordinary buffer
 	executable* exe = _jit_exe_initialize();
@@ -1383,9 +1406,13 @@ fn_compiled_entry JIT_compile(AstNode* tree)
 	
 	fn_compiled_entry program_entry = (fn_compiled_entry)exe->entry_point;
 	assert(program_entry);
+
+	size_t size = exe->current_size;
+	*pp_entry_point = program_entry;
+
 	_jit_exe_free(exe);
 
-	return program_entry; //TODO: Return ptr to compiled function
+	return size; //TODO: Return ptr to compiled function
 }
 
 void JIT_release(fn_compiled_entry fn_address)
