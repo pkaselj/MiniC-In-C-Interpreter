@@ -52,8 +52,8 @@ The project includes an experimental Just-In-Time (JIT) compilation stage writte
     - [ ] `xor`
 - [ ] Flow control and loops (conditional/unconditional relative jumps for `if`, `while`, and `for`).
     - [x] `while` loops
-    - [ ] `for` loops
-    - [ ] `if` statement block
+    - [x] `for` loops
+    - [x] `if` statement block
 - [x] Function calls and ABI stack alignment.
 - [x] Local variables and frame pointer relative displacement (`[rbp - offset]`).
 - [x] Passing arguments to functions
