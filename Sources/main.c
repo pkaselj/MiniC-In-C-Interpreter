@@ -30,16 +30,57 @@ int main(int argc, char* argv[])
 
 	//LogInfo("Program input: '%s'\n", input.data);
 
-	const char* filename = "./Examples/Test.mc";
-	String input = LoadFile(filename, INPUT_BUFFER_SIZE);
-	if (sv_is_empty(input))
-	{
-		LogError("Could not load file '%s'!\n", filename);
+	String input = sv_create_empty();
 
-		// TODO Error handling
-		sv_free(input);
+	if (argc < 3)
+	{
+		printf(
+			"Usage: %s (--file FILENAME | --eval EXPRESSION)				 \n"
+			"			--file FILENAME		Reads file and evaluates it		 \n"
+			"			--eval EXPRESSION   Evaluates the expression from CLI\n"
+			"Description:\n"
+			"	JIT (Just in time) compiler for Mini-C language. Prints the  \n"
+			"	value of the last evaluated expression.						 \n",
+			argv[0]
+		);
+
 		return 1;
 	}
+	else if (strcmp(argv[1], "--file") == 0 || strcmp(argv[1], "-f") == 0)
+	{
+		const char* filename = argv[2];
+		input = LoadFile(filename, INPUT_BUFFER_SIZE);
+		if (sv_is_empty(input))
+		{
+			LogError("Could not load file '%s'!\n", filename);
+
+			// TODO Error handling
+			sv_free(input);
+			return 1;
+		}
+	}
+	else if (strcmp(argv[1], "--eval") == 0 || strcmp(argv[1], "-e") == 0)
+	{
+		size_t size = strlen(argv[2]);
+		if (size > INPUT_BUFFER_SIZE)
+		{
+			LogError("Expression size [%llu] larger than buffer size [%llu]\n", size, INPUT_BUFFER_SIZE);
+			return 1;
+		}
+
+		char* buffer = malloc(size + 1);
+		memset(buffer, 0, size + 1);
+		memcpy(buffer, argv[2], size);
+
+		input = sv_create(buffer);
+	}
+	else
+	{
+		printf("Unknown option: %s\n", argv[1]);
+		return 1;
+	}
+
+
 
 	LogInfo("======= START OF PROGRAM\n");
 	LogInfo("%s\n", input.data);
