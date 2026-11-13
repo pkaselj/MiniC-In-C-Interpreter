@@ -618,7 +618,7 @@ static AstNode* parse_term(ListConstIterator* iter)
 {
 	AstNode* node = parse_unary(iter);
 	Token* token;
-	const LexTokenType required[] = { TT_OP_MUL, TT_OP_DIV };
+	const LexTokenType required[] = { TT_OP_MUL, TT_OP_DIV, TT_OP_MOD };
 
 	while ((token = _parser_match_any(iter, required, sizeof(required) / sizeof(required[0]))))
 	{

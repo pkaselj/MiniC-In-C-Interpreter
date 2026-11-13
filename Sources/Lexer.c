@@ -194,6 +194,8 @@ static Token* lexer_parse_operator(const StringView buffer)
 		return tok_create_operator(TT_OP_MUL, 1);
 	else if (sv_begins_with(buffer, sv_create("/")))
 		return tok_create_operator(TT_OP_DIV, 1);
+	else if (sv_begins_with(buffer, sv_create("%")))
+			 return tok_create_operator(TT_OP_MOD, 1);
 	else if (sv_begins_with(buffer, sv_create(">")))
 		return tok_create_operator(TT_OP_GT, 1);
 	else if (sv_begins_with(buffer, sv_create("<")))

@@ -775,6 +775,38 @@ void _amd64_emit_imul_r64_r64(executable* exe, enu_register r64_0, enu_register 
 	_jit_exe_w8(exe, _MODRM(MOD_RR, r64_0, r64_1));
 }
 
+// Emits CQO i.e. sign extends RAX to RDX:RAX
+void _amd64_emit_signextend_rax_rdx(executable* exe)
+{
+	_jit_exe_w8(exe, _REX(1, 0, 0, 0));
+	_jit_exe_w8(exe, 0x99);
+}
+
+// No remainder, just signed integer division
+// RAX <- (RDX:RAX) / r64_0
+void _amd64_emit_idiv_rax_r64(executable* exe, enu_register r64_0)
+{
+	_amd64_emit_signextend_rax_rdx(exe);
+
+	_jit_exe_w8(exe, _REX(1, 0, 0, 0));
+	_jit_exe_w8(exe, 0xF7);
+	_jit_exe_w8(exe, _MODRM(MOD_RR, 0x07, r64_0));
+}
+
+// Remainder of IDIV, signed integer division
+// RAX <- (RDX:RAX) % r64_0
+void _amd64_emit_mod_rax_r64(executable* exe, enu_register r64_0)
+{
+	_amd64_emit_signextend_rax_rdx(exe);
+
+	_jit_exe_w8(exe, _REX(1, 0, 0, 0));
+	_jit_exe_w8(exe, 0xF7);
+	_jit_exe_w8(exe, _MODRM(MOD_RR, 0x07, r64_0));
+
+	_amd64_emit_mov_r64_r64(exe, REG_RAX, REG_RDX);
+}
+
+
 // reg64_0 <- (reg64_0 - imm32_1)
 void _amd64_emit_sub_r64_imm32(executable* exe, enu_register r64_0, uint32_t imm32_1)
 {
@@ -1125,6 +1157,12 @@ void _jit_compile_binary_expression(AstNode* tree, executable* exe)
 	case TT_OP_MUL:
 		_amd64_emit_imul_r64_r64(exe, REG_RAX, REG_RCX);
 		break;
+	case TT_OP_DIV:
+		_amd64_emit_idiv_rax_r64(exe, REG_RCX);
+		break;
+	case TT_OP_MOD:
+		_amd64_emit_mod_rax_r64(exe, REG_RCX);
+		break;
 	case TT_OP_LT:
 		_amd64_emit_compare_set_rax_r64_r64(exe, REG_RAX, REG_RCX, SETCC_SETL);
 		break;
@@ -1149,7 +1187,6 @@ void _jit_compile_binary_expression(AstNode* tree, executable* exe)
 	case TT_OP_OR:
 		_amd64_emit_logic_or_r64_r64(exe, REG_RAX, REG_RCX);
 		break;
-	// TODO: More operators, DIV?
 	default:
 		LogError("JIT :: _jit_compile_binary_expression() - cannot handle operator [%d / %s]\n", op, GetLexTokenTypeString(op));
 		break;

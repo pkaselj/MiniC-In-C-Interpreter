@@ -20,6 +20,7 @@ typedef enum LexTokenType
     TT_OP_SUB, //  -
     TT_OP_MUL, //  *
     TT_OP_DIV, //  /
+    TT_OP_MOD, // %
     TT_OP_EQ,  //  ==
     TT_OP_NEQ, //  !=
     TT_OP_GT,  //  >

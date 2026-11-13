@@ -50,6 +50,7 @@ Value operator_impl_binary(LexTokenType op, Value left, Value right)
 		case TT_OP_SUB: return value_create_number(left.as._number - right.as._number);
 		case TT_OP_MUL: return value_create_number(left.as._number * right.as._number);
 		case TT_OP_DIV: return value_create_number(left.as._number / right.as._number);
+		case TT_OP_MOD: return value_create_number(left.as._number / right.as._number);
 		case TT_OP_EQ:	return value_create_bool(left.as._number == right.as._number);
 		case TT_OP_NEQ: return value_create_bool(left.as._number != right.as._number);
 		case TT_OP_GT:	return value_create_bool(left.as._number >  right.as._number);

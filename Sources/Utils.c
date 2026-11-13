@@ -171,6 +171,7 @@ const char* GetLexTokenTypeString(enum LexTokenType type)
 	case TT_OP_SUB: return "TT_OP_SUB";
 	case TT_OP_MUL: return "TT_OP_MUL";
 	case TT_OP_DIV: return "TT_OP_DIV";
+	case TT_OP_MOD: return "TT_OP_MOD";
 	case TT_OP_EQ: return "TT_OP_EQ";
 	case TT_OP_NEQ: return "TT_OP_NEQ";
 	case TT_OP_GT: return "TT_OP_GT";
