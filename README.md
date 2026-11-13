@@ -311,6 +311,211 @@ fd: cc                      int3
 ```
 - * Disassembly was obtained using the [defuse.ca Disassembler](https://defuse.ca/online-x86-assembler.htm)
 
+### CLI Usage Examples
+
+#### Compiling an Expression
+
+Command:
+
+```
+PS S:\TEMP\MiniC-Interpreter-C\x64\Debug> .\MiniC-Interpreter-C.exe --eval "j = 0; for (i = 0; i < 3; i = i + 1) { j = j + 3 * i; } j;"
+```
+
+Result:
+
+```
+[INF] :: ======= START OF PROGRAM
+[INF] :: j = 0; for (i = 0; i < 3; i = i + 1) { j = j + 3 * i; } j;
+[INF] :: ======= END OF PROGRAM
+[Token type=TT_ID length=1 data=j]
+[Token type=TT_ASSIGN length=1 data=]
+[Token type=TT_NUMBER length=1 data=0.000000]
+[Token type=TT_DELIM length=1 data=]
+[Token type=TT_K_FOR length=3 data=]
+[Token type=TT_O_PAREN length=1 data=]
+[Token type=TT_ID length=1 data=i]
+[Token type=TT_ASSIGN length=1 data=]
+[Token type=TT_NUMBER length=1 data=0.000000]
+[Token type=TT_DELIM length=1 data=]
+[Token type=TT_ID length=1 data=i]
+[Token type=TT_OP_LT length=1 data=]
+[Token type=TT_NUMBER length=1 data=3.000000]
+[Token type=TT_DELIM length=1 data=]
+[Token type=TT_ID length=1 data=i]
+[Token type=TT_ASSIGN length=1 data=]
+[Token type=TT_ID length=1 data=i]
+[Token type=TT_OP_ADD length=1 data=]
+[Token type=TT_NUMBER length=1 data=1.000000]
+[Token type=TT_C_PAREN length=1 data=]
+[Token type=TT_O_BRACE length=1 data=]
+[Token type=TT_ID length=1 data=j]
+[Token type=TT_ASSIGN length=1 data=]
+[Token type=TT_ID length=1 data=j]
+[Token type=TT_OP_ADD length=1 data=]
+[Token type=TT_NUMBER length=1 data=3.000000]
+[Token type=TT_OP_MUL length=1 data=]
+[Token type=TT_ID length=1 data=i]
+[Token type=TT_DELIM length=1 data=]
+[Token type=TT_C_BRACE length=1 data=]
+[Token type=TT_ID length=1 data=j]
+[Token type=TT_DELIM length=1 data=]
+AST_S
+ AST_ASSIGN_EXPR
+.>AST_ID_EXPR
+.. j
+.>AST_NUM_EXPR
+.. 0.000000
+ AST_FOR_STMT
+.>AST_ASSIGN_EXPR
+.. AST_ID_EXPR
+...>i
+.. AST_NUM_EXPR
+...>0.000000
+.>AST_BINARY_EXPR
+.. AST_ID_EXPR
+...>i
+.. AST_NUM_EXPR
+...>3.000000
+.. TT_OP_LT
+.>AST_ASSIGN_EXPR
+.. AST_ID_EXPR
+...>i
+.. AST_BINARY_EXPR
+...>AST_ID_EXPR
+.... i
+...>AST_NUM_EXPR
+.... 1.000000
+...>TT_OP_ADD
+.>AST_BLOCK_STMT
+.. AST_ASSIGN_EXPR
+...>AST_ID_EXPR
+.... j
+...>AST_BINARY_EXPR
+.... AST_ID_EXPR
+.....>j
+.... AST_BINARY_EXPR
+.....>AST_NUM_EXPR
+...... 3.000000
+.....>AST_ID_EXPR
+...... i
+.....>TT_OP_MUL
+.... TT_OP_ADD
+ AST_ID_EXPR
+.>j
+====== [SYMBOL TABLE] ======
+Symbol [0] - Id: [_entry] - Entry Point: [0x21CC2540000] / offset [0]
+        Local: [j] - RBP offset: [-8 / -0x8]
+        Local: [i] - RBP offset: [-16 / -0x10]
+        Local: [] - RBP offset: [-24 / -0x18]
+        Local: [] - RBP offset: [-32 / -0x20]
+        Local: [] - RBP offset: [-40 / -0x28]
+        Local: [] - RBP offset: [-48 / -0x30]
+====== [            ] ======
+[INF] :: Result from calling the compiled code: [9 / 0x9]
+```
+
+#### Compiling a File
+
+Command:
+
+```
+PS S:\TEMP\MiniC-Interpreter-C\x64\Debug> .\MiniC-Interpreter-C.exe --file "..\..\Examples\Test2.mc"
+```
+
+Result:
+
+```
+[INF] :: ======= START OF PROGRAM
+[INF] :: j = 0; for (i = 0; i < 3; i = i + 1) { j = j + 3 * i; } j;
+[INF] :: ======= END OF PROGRAM
+[Token type=TT_ID length=1 data=j]
+[Token type=TT_ASSIGN length=1 data=]
+[Token type=TT_NUMBER length=1 data=0.000000]
+[Token type=TT_DELIM length=1 data=]
+[Token type=TT_K_FOR length=3 data=]
+[Token type=TT_O_PAREN length=1 data=]
+[Token type=TT_ID length=1 data=i]
+[Token type=TT_ASSIGN length=1 data=]
+[Token type=TT_NUMBER length=1 data=0.000000]
+[Token type=TT_DELIM length=1 data=]
+[Token type=TT_ID length=1 data=i]
+[Token type=TT_OP_LT length=1 data=]
+[Token type=TT_NUMBER length=1 data=3.000000]
+[Token type=TT_DELIM length=1 data=]
+[Token type=TT_ID length=1 data=i]
+[Token type=TT_ASSIGN length=1 data=]
+[Token type=TT_ID length=1 data=i]
+[Token type=TT_OP_ADD length=1 data=]
+[Token type=TT_NUMBER length=1 data=1.000000]
+[Token type=TT_C_PAREN length=1 data=]
+[Token type=TT_O_BRACE length=1 data=]
+[Token type=TT_ID length=1 data=j]
+[Token type=TT_ASSIGN length=1 data=]
+[Token type=TT_ID length=1 data=j]
+[Token type=TT_OP_ADD length=1 data=]
+[Token type=TT_NUMBER length=1 data=3.000000]
+[Token type=TT_OP_MUL length=1 data=]
+[Token type=TT_ID length=1 data=i]
+[Token type=TT_DELIM length=1 data=]
+[Token type=TT_C_BRACE length=1 data=]
+[Token type=TT_ID length=1 data=j]
+[Token type=TT_DELIM length=1 data=]
+AST_S
+ AST_ASSIGN_EXPR
+.>AST_ID_EXPR
+.. j
+.>AST_NUM_EXPR
+.. 0.000000
+ AST_FOR_STMT
+.>AST_ASSIGN_EXPR
+.. AST_ID_EXPR
+...>i
+.. AST_NUM_EXPR
+...>0.000000
+.>AST_BINARY_EXPR
+.. AST_ID_EXPR
+...>i
+.. AST_NUM_EXPR
+...>3.000000
+.. TT_OP_LT
+.>AST_ASSIGN_EXPR
+.. AST_ID_EXPR
+...>i
+.. AST_BINARY_EXPR
+...>AST_ID_EXPR
+.... i
+...>AST_NUM_EXPR
+.... 1.000000
+...>TT_OP_ADD
+.>AST_BLOCK_STMT
+.. AST_ASSIGN_EXPR
+...>AST_ID_EXPR
+.... j
+...>AST_BINARY_EXPR
+.... AST_ID_EXPR
+.....>j
+.... AST_BINARY_EXPR
+.....>AST_NUM_EXPR
+...... 3.000000
+.....>AST_ID_EXPR
+...... i
+.....>TT_OP_MUL
+.... TT_OP_ADD
+ AST_ID_EXPR
+.>j
+====== [SYMBOL TABLE] ======
+Symbol [0] - Id: [_entry] - Entry Point: [0x21CC2540000] / offset [0]
+        Local: [j] - RBP offset: [-8 / -0x8]
+        Local: [i] - RBP offset: [-16 / -0x10]
+        Local: [] - RBP offset: [-24 / -0x18]
+        Local: [] - RBP offset: [-32 / -0x20]
+        Local: [] - RBP offset: [-40 / -0x28]
+        Local: [] - RBP offset: [-48 / -0x30]
+====== [            ] ======
+[INF] :: Result from calling the compiled code: [9 / 0x9]
+```
+
+
 ### Interactive / REPL Example (from Python example)
 
 ```

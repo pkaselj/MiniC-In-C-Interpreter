@@ -131,7 +131,7 @@ static void tok_free_identifier(Token* token)
 static size_t lexer_parse_whitespace(const StringView buffer)
 {
 	size_t i = 0;
-	while (i < buffer.size && isblank(buffer.data[i]))
+	while (i < buffer.size && (isblank(buffer.data[i]) || isspace(buffer.data[i])))
 	{
 		i++;
 	}

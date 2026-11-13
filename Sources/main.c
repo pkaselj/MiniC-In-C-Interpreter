@@ -83,7 +83,7 @@ int main(int argc, char* argv[])
 
 
 	LogInfo("======= START OF PROGRAM\n");
-	LogInfo("%s\n", input.data);
+	printf("%s\n", input.data);
 	LogInfo("======= END OF PROGRAM\n");
 
 	List* tokens = lexer_perform(input);
