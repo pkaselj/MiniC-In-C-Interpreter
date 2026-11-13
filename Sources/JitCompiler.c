@@ -956,6 +956,22 @@ void _amd64_emit_compare_set_rax_r64_r64(executable* exe, enu_register r64_0, en
 	_amd64_emit_movzx_rax_al(exe);
 }
 
+// r64_0 <- r64_0 && r64_1
+void _amd64_emit_logic_and_r64_r64(executable* exe, enu_register r64_0, enu_register r64_1)
+{
+	_jit_exe_w8(exe, _REX(1, 0, 0, 0));
+	_jit_exe_w8(exe, 0x21);
+	_jit_exe_w8(exe, _MODRM(MOD_RR, r64_1, r64_0));
+}
+
+// r64_0 <- r64_0 || r64_1
+void _amd64_emit_logic_or_r64_r64(executable* exe, enu_register r64_0, enu_register r64_1)
+{
+	_jit_exe_w8(exe, _REX(1, 0, 0, 0));
+	_jit_exe_w8(exe, 0x09);
+	_jit_exe_w8(exe, _MODRM(MOD_RR, r64_1, r64_0));
+}
+
 // --------------------------------------------
 
 void _jit_compile_statement(AstNode* tree, executable* exe);
@@ -1107,6 +1123,12 @@ void _jit_compile_binary_expression(AstNode* tree, executable* exe)
 		break;
 	case TT_OP_NEQ:
 		_amd64_emit_compare_set_rax_r64_r64(exe, REG_RAX, REG_RCX, SETCC_SETNE);
+		break;
+	case TT_OP_AND:
+		_amd64_emit_logic_and_r64_r64(exe, REG_RAX, REG_RCX);
+		break;
+	case TT_OP_OR:
+		_amd64_emit_logic_or_r64_r64(exe, REG_RAX, REG_RCX);
 		break;
 	// TODO: More operators, DIV?
 	default:

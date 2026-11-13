@@ -20,7 +20,7 @@ int main(int argc, char* argv[])
 	//StringView input = sv_create("i = 0; while(i != 10) {i = i + 1;} return i;");
 	//StringView input = sv_create("function a(i) { i=3; return 2; i=5; } a(1);");
 	//StringView input = sv_create("a = 0; for(i = 3; i < 10; i = i + 3){ a = a + 1; } return a;");
-	StringView input = sv_create("i = 3; if(2 == 1) { i = 5;} return i; ");
+	StringView input = sv_create("i = 3; if(2 == 1 || 1 == 1) { i = 5;} return i; ");
 
 
 	LogInfo("Program input: '%s'\n", input.data);
