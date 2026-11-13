@@ -857,6 +857,7 @@ void _amd64_emit_test_rax_rax(executable* exe)
 
 typedef enum
 {
+	JCC_JZ_REL32 = 0x84,
 	JCC_JNZ_REL32 = 0x85,
 } enu_jcc_type;
 
@@ -1299,6 +1300,37 @@ void _jit_compile_for_statement(AstNode* tree, executable* exe)
 	*p1 = OFFSET_32B(rip1, _loop_test);
 }
 
+void _jit_compile_if_statement(AstNode* tree, executable* exe)
+{
+	assert(exe);
+	assert(tree);
+	assert(tree->type == AST_IF_STMT);
+
+	assert(tree->u.if_stmt.condition);
+	assert(tree->u.if_stmt.block_if);
+
+	_jit_compile_expression(tree->u.if_stmt.condition, exe);
+	_amd64_emit_test_rax_rax(exe);
+	
+	// Result of condition is in RAX
+	uint32_t* p_if_false = _amd64_util_emit_jcc_rel32_placeholder(exe, JCC_JZ_REL32);
+	unsigned char* rip_if_false = exe->current_pos;
+
+	// Execute IF block on true
+	_jit_compile_statement(tree->u.if_stmt.block_if, exe);
+	uint32_t* p_if_end = _amd64_util_emit_jmp_rel32_placeholder(exe);
+	unsigned char* rip_if_end = exe->current_pos;
+
+	// If no else block, this is the end of if
+	*p_if_false = OFFSET_32B(rip_if_false, exe->current_pos);
+	if (tree->u.if_stmt.block_else)
+	{
+		_jit_compile_statement(tree->u.if_stmt.block_else, exe);
+	}
+	
+	*p_if_end = OFFSET_32B(rip_if_end, exe->current_pos);
+}
+
 void _jit_compile_return_statement(AstNode* tree, executable* exe)
 {
 	assert(exe);
@@ -1384,11 +1416,14 @@ void _jit_compile_statement(AstNode* tree, executable* exe)
 	case AST_RET_STMT: // return (expression);
 		_jit_compile_return_statement(tree, exe);
 		break;
-	case AST_WHILE_STMT: // While
+	case AST_WHILE_STMT: // While loop
 		_jit_compile_while_statement(tree, exe);
 		break;
-	case AST_FOR_STMT: // While
+	case AST_FOR_STMT: // For loop
 		_jit_compile_for_statement(tree, exe);
+		break;
+	case AST_IF_STMT: // If/else block
+		_jit_compile_if_statement(tree, exe);
 		break;
 	case AST_BLOCK_STMT: // Code block '{' ... '}'
 		_jit_compile_code_block_statement(tree, exe);
