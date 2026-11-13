@@ -364,6 +364,17 @@ static void _ast_expr_stmt_free(AstNode* node)
 	free(node);
 }
 
+static void _ast_ret_stmt_free(AstNode* node)
+{
+	assert(node);
+	assert(node->type == AST_RET_STMT);
+
+	ast_node_free(node->u.ret_stmt.expression);
+	node->u.ret_stmt.expression = NULL;
+
+	free(node);
+}
+
 static void _ast_if_stmt_free(AstNode* node)
 {
 	assert(node);
@@ -490,6 +501,9 @@ static void ast_node_free(AstNode* node)
 		break;
 	case AST_EXPR_STMT:
 		_ast_expr_stmt_free(node);
+		break;
+	case AST_RET_STMT:
+		_ast_ret_stmt_free(node);
 		break;
 	case AST_IF_STMT:
 		_ast_if_stmt_free(node);

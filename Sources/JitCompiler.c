@@ -267,17 +267,33 @@ typedef enum _enu_register
 
 // --------------------------------------------
 
+// Structure that describes local (named and unnamed) variables.
 typedef struct _local
 {
 	String loc_id;
 	size_t rbp_offset; // Absolute value, offset from rbp is always negative
 } local;
 
+// Currently, `return` statements are implemented by issuing
+// a relative jump to function epilogue. At the time of definition we don't
+// know the relative offset to the destination so we record the location
+// where return jump was issues so we can populate it later
+typedef struct _retjmp
+{
+	uint32_t* rip_base;			// Pointer to the base address of relative jump
+								// (intruction after issuing JMP)
+	uint32_t* jmp_placeholder;	// Pointer to the placeholder of jump instruction
+								// Populated @ the end of the fn. when we know
+								// where the epilogue is located so we can
+								// *jmp_placeholder = (epilogue_addr - rip_base);
+} retjmp;
+
 typedef struct _symbol
 {
 	String sym_id;
 	const char* sym_entry_point;
-	List* locals; // List<local>, list of local variables
+	List* locals; // List<local*>, list of local variables
+	List* retjmps; // List<retjmp*> list of addresses that jump to fn epilogue
 } symbol;
 
 typedef struct _executable
@@ -330,8 +346,10 @@ void __jit_symbol_dtor(void* sym)
 	sv_free(sym2->sym_id);
 	sym2->sym_entry_point = NULL;
 	list_free(sym2->locals);
+	list_free(sym2->retjmps);
 	free(sym2);
 }
+
 
 NONOWNING symbol* _jit_exe_register_symbol(executable* exe, const StringView sym_id)
 {
@@ -343,6 +361,7 @@ NONOWNING symbol* _jit_exe_register_symbol(executable* exe, const StringView sym
 	sym->sym_entry_point = exe->current_pos;
 	sym->sym_id = sv_create_copy(sym_id);
 	sym->locals = list_create();
+	sym->retjmps = list_create();
 
 	ListNode* n = list_create_node(sym, __jit_symbol_dtor);
 	list_push(exe->symbol_table, n);
@@ -369,6 +388,60 @@ NONOWNING local* _jit_exe_allocate_local_temporary_variable(executable* exe)
 	local* var = _jit_exe_allocate_local_variable(exe, id);
 	sv_free(id);
 	return var;
+}
+
+void __jit_retjmp_dtor(void* jmp)
+{
+	if (!jmp)
+		return;
+
+	retjmp* jmp2 = (retjmp*)jmp;
+
+	ZeroMemory(jmp2, sizeof(*jmp2));
+
+	free(jmp);
+}
+
+NONOWNING retjmp* _jit_exe_register_return_point(executable* exe, uint32_t* rip_base, uint32_t* jmp_placeholder)
+{
+	assert(exe);
+	assert(exe->current_symbol);
+	assert(exe->current_symbol->retjmps);
+
+	assert(rip_base);
+	assert(jmp_placeholder);
+
+	retjmp* jmp = (retjmp*)malloc(sizeof(retjmp));
+	assert(jmp);
+
+	jmp->rip_base = rip_base;
+	jmp->jmp_placeholder = jmp_placeholder;
+
+	ListNode* n = list_create_node(jmp, __jit_retjmp_dtor);
+	list_push(exe->current_symbol->retjmps, n);
+
+	return jmp; // NONWONING ref
+}
+
+void _jit_exe_recalculate_return_jumps(executable* exe, uint32_t* fn_epilogue_addr)
+{
+	assert(exe);
+	assert(exe->current_symbol);
+	assert(exe->current_symbol->retjmps);
+	assert(fn_epilogue_addr);
+
+	retjmp* var = NULL;
+	ListConstIterator* it = list_create_iterator(exe->current_symbol->retjmps);
+	for (; list_iterator_valid(it); list_iterator_advance(it))
+	{
+		var = list_iterator_get(it);
+
+		assert(var->jmp_placeholder);
+		assert(var->rip_base);
+
+		*(var->jmp_placeholder) = OFFSET_32B(var->rip_base, fn_epilogue_addr);
+	}
+	list_free_iterator(it);
 }
 
 NONOWNING local* _jit_exe_allocate_local_variable(executable* exe, StringView id)
@@ -1184,7 +1257,27 @@ void _jit_compile_return_statement(AstNode* tree, executable* exe)
 	assert(tree);
 	assert(tree->type == AST_RET_STMT);
 
-	LogError("_jit_compile_return_statement :: Not implemented\n");
+	if (tree->u.ret_stmt.expression)
+	{
+		_jit_compile_expression(tree->u.ret_stmt.expression, exe);
+		// By convention, result of above expression is in RAX
+	}
+	else
+	{
+		// TODO: Maybe clear RAX register?
+	}
+
+	// Instead of returning, issue a jump to function's 
+	// epilogue which handles cleanup including stack cleanup
+
+	uint32_t* jmp_stub = _amd64_util_emit_jmp_rel32_placeholder(exe);
+	uint32_t* jmp_base = exe->current_pos;
+
+	// Assert we are in a function
+	assert(exe->current_symbol);
+
+	// Add pointer to rel jmp, will be populated later
+	_jit_exe_register_return_point(exe, jmp_base, jmp_stub);
 }
 
 void _jit_compile_code_block_statement(AstNode* tree, executable* exe)
@@ -1324,7 +1417,7 @@ void _jit_compile_function_definition(AstNode* tree, executable* exe)
 
 	// Whatever is last written in RAX will be returned
 	// Should be last expression's (statement's) value
-
+	uint32_t* fn_epilogue_addr = exe->current_pos;
 	_jit_compile_function_epilogue(exe);
 
 	// After compiling the function and registering all local variables,
@@ -1344,6 +1437,14 @@ void _jit_compile_function_definition(AstNode* tree, executable* exe)
 	preallocated_aligned += ( 16 - (preallocated_aligned % 16)) % 16; // TODO: power of 2 trick
 
 	*local_prealloc_size_ptr = (uint32_t)preallocated_aligned;
+
+	// After everything is implemented, we need to address RETURN
+	// statements. They are implemented so that each RETURN statement
+	// in Mini-C doesn't return immediately, but jumps to the function
+	// epilogue. Since those jumps are relative and only now we have all 
+	// code emitted, only now can we calculate all those relative offsets
+	// and rewrite those placeholders in JMP statements.
+	_jit_exe_recalculate_return_jumps(exe, fn_epilogue_addr);
 
 	// Restore old symbol
 	exe->current_symbol = old_sym;
@@ -1384,6 +1485,7 @@ void _jit_compile_program(AstNode* tree, executable* exe)
 
 	// Whatever is last written in RAX will be returned
 	// Should be last expression's (statement's) value
+	uint32_t* fn_epilogue_addr = exe->current_pos;
 	_jit_compile_function_epilogue(exe);
 
 	// After compiling the function and registering all local variables,
@@ -1403,6 +1505,14 @@ void _jit_compile_program(AstNode* tree, executable* exe)
 	preallocated_aligned += (16 - (preallocated_aligned % 16)) % 16; // TODO: power of 2 trick
 
 	*local_prealloc_size_ptr = (uint32_t)preallocated_aligned;
+
+	// After everything is implemented, we need to address RETURN
+	// statements. They are implemented so that each RETURN statement
+	// in Mini-C doesn't return immediately, but jumps to the function
+	// epilogue. Since those jumps are relative and only now we have all 
+	// code emitted, only now can we calculate all those relative offsets
+	// and rewrite those placeholders in JMP statements.
+	_jit_exe_recalculate_return_jumps(exe, fn_epilogue_addr);
 }
 
 

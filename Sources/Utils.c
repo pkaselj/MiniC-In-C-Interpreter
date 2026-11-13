@@ -263,6 +263,7 @@ const char* GetAstNodeTypeString(enum AstNodeType type)
 	case AST_NUM_EXPR: return "AST_NUM_EXPR";
 	case AST_STR_EXPR: return "AST_STR_EXPR";
 	case AST_EXPR_STMT: return "AST_EXPR_STMT";
+	case AST_RET_STMT: return "AST_RET_STMT";
 	case AST_IF_STMT: return "AST_IF_STMT";
 	case AST_FOR_STMT: return "AST_FOR_STMT";
 	case AST_WHILE_STMT: return "AST_WHILE_STMT";

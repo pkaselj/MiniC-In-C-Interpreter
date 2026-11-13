@@ -58,6 +58,7 @@ The project includes an experimental Just-In-Time (JIT) compilation stage writte
 - [x] Local variables and frame pointer relative displacement (`[rbp - offset]`).
 - [x] Passing arguments to functions
 - [ ] Calling external C DLLs
+- [x] `return` statements
 
 ## Grammar EBNF
 
