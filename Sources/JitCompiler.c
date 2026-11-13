@@ -832,11 +832,11 @@ void _amd64_util_emit_call_rel32_from_abs(executable* exe, unsigned char* abs_sy
 	_amd64_emit_call_rel32(exe, encoded_offset);
 }
 
-void _amd64_emit_jmp_rel32(executable* exe, uint32_t offset)
-{
-	_jit_exe_w8(exe, 0xE9);
-	_jit_exe_w32(exe, offset);
-}
+//void _amd64_emit_jmp_rel32(executable* exe, uint32_t offset)
+//{
+//	_jit_exe_w8(exe, 0xE9);
+//	_jit_exe_w32(exe, offset);
+//}
 
 uint32_t* _amd64_util_emit_jmp_rel32_placeholder(executable* exe)
 {
@@ -861,12 +861,12 @@ typedef enum
 } enu_jcc_type;
 
 // any of the Jcc instructions like JNZ, JZ, ...
-void _amd64_emit_jcc_rel32(executable* exe, enu_jcc_type jcc, uint32_t offset)
-{
-	_jit_exe_w8(exe, 0x0F);
-	_jit_exe_w8(exe, (uint8_t)jcc);
-	_jit_exe_w32(exe, offset);
-}
+//void _amd64_emit_jcc_rel32(executable* exe, enu_jcc_type jcc, uint32_t offset)
+//{
+//	_jit_exe_w8(exe, 0x0F);
+//	_jit_exe_w8(exe, (uint8_t)jcc);
+//	_jit_exe_w32(exe, offset);
+//}
 
 uint32_t* _amd64_util_emit_jcc_rel32_placeholder(executable* exe, enu_jcc_type jcc)
 {
@@ -1251,6 +1251,54 @@ void _jit_compile_while_statement(AstNode* tree, executable* exe)
 	*p1 = OFFSET_32B(rip1, _loop_test);
 }
 
+void _jit_compile_for_statement(AstNode* tree, executable* exe)
+{
+	assert(exe);
+	assert(tree);
+	assert(tree->type == AST_FOR_STMT);
+
+	// Tail-jumping loop implementation
+
+	// First emit initializer if exists
+	if (tree->u.for_stmt.initial)
+	{
+		_jit_compile_expression(tree->u.for_stmt.initial, exe);
+	}
+
+	// Next jump to check
+	uint32_t* p1 = _amd64_util_emit_jmp_rel32_placeholder(exe);
+	unsigned char* rip1 = exe->current_pos;
+
+	// Loop body
+	unsigned char* _loop_body = exe->current_pos;
+	_jit_compile_statement(tree->u.for_stmt.block, exe);
+
+	// Loop iteration
+	if (tree->u.for_stmt.next_action)
+	{
+		_jit_compile_expression(tree->u.for_stmt.next_action, exe);
+	}
+
+	// Loop condition
+	unsigned char* _loop_test = exe->current_pos;
+	if (tree->u.for_stmt.end_condition)
+	{
+		_jit_compile_expression(tree->u.for_stmt.end_condition, exe);
+		_amd64_emit_test_rax_rax(exe);
+		// If condition is true, jump back to _loop_body 
+		uint32_t* p2 = _amd64_util_emit_jcc_rel32_placeholder(exe, JCC_JNZ_REL32);
+		*p2 = OFFSET_32B(exe->current_pos, _loop_body);
+	}
+	else
+	{
+		// If no condition, loop forever (jump unconditionally)
+		uint32_t* p2 = _amd64_util_emit_jmp_rel32_placeholder(exe);
+		*p2 = OFFSET_32B(exe->current_pos, _loop_body);
+	}
+
+	*p1 = OFFSET_32B(rip1, _loop_test);
+}
+
 void _jit_compile_return_statement(AstNode* tree, executable* exe)
 {
 	assert(exe);
@@ -1338,6 +1386,9 @@ void _jit_compile_statement(AstNode* tree, executable* exe)
 		break;
 	case AST_WHILE_STMT: // While
 		_jit_compile_while_statement(tree, exe);
+		break;
+	case AST_FOR_STMT: // While
+		_jit_compile_for_statement(tree, exe);
 		break;
 	case AST_BLOCK_STMT: // Code block '{' ... '}'
 		_jit_compile_code_block_statement(tree, exe);

@@ -18,7 +18,9 @@ int main(int argc, char* argv[])
 	//StringView input = sv_create("x=3; x = x + 3;");
 	//StringView input = sv_create("function fn1(x,y){ x+y; }  fn1(3,5*2);");
 	//StringView input = sv_create("i = 0; while(i != 10) {i = i + 1;} return i;");
-	StringView input = sv_create("function a(i) { i=3; return 2; i=5; } a(1);");
+	//StringView input = sv_create("function a(i) { i=3; return 2; i=5; } a(1);");
+	StringView input = sv_create("a = 0; for(i = 3; i < 10; i = i + 3){ a = a + 1; } return a;");
+
 
 	LogInfo("Program input: '%s'\n", input.data);
 
