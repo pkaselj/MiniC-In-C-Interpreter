@@ -972,6 +972,25 @@ void _amd64_emit_logic_or_r64_r64(executable* exe, enu_register r64_0, enu_regis
 	_jit_exe_w8(exe, _MODRM(MOD_RR, r64_1, r64_0));
 }
 
+// r64_0 <- -r64_0
+void _amd64_emit_arithmetic_negate_r64(executable* exe, enu_register r64_0)
+{
+	_jit_exe_w8(exe, _REX(1, 0, 0, 0));
+	_jit_exe_w8(exe, 0xF7);
+	_jit_exe_w8(exe, _MODRM(MOD_RR, 0x03, r64_0));
+}
+
+// RAX <- !RAX
+void _amd64_emit_logic_not_rax(executable* exe)
+{
+	// TEST RAX, RAX
+	_amd64_emit_test_rax_rax(exe);
+	// If 0 set RAX to 1, else set RAX to 0
+	_amd64_emit_setcc_r8(exe, REG_AL, SETCC_SETE);
+	_amd64_emit_movzx_rax_al(exe);
+}
+
+
 // --------------------------------------------
 
 void _jit_compile_statement(AstNode* tree, executable* exe);
@@ -1133,6 +1152,34 @@ void _jit_compile_binary_expression(AstNode* tree, executable* exe)
 	// TODO: More operators, DIV?
 	default:
 		LogError("JIT :: _jit_compile_binary_expression() - cannot handle operator [%d / %s]\n", op, GetLexTokenTypeString(op));
+		break;
+	}
+
+	// Result of the operation is kept in accumulator register (RAX)
+}
+
+void _jit_compile_unary_expression(AstNode* tree, executable* exe)
+{
+	assert(exe);
+	assert(tree);
+	assert(tree->type == AST_UNARY_EXPR);
+
+	AstNode* expr = tree->u.unary_expr.child;
+	_jit_compile_expression(expr, exe);
+	// Result of the operation is kept in accumulator register (RAX)
+
+
+	LexTokenType op = tree->u.unary_expr.op;
+	switch (op)
+	{
+	case TT_OP_NOT:
+		_amd64_emit_logic_not_rax(exe);
+		break;
+	case TT_OP_SUB:
+		_amd64_emit_arithmetic_negate_r64(exe, REG_RAX);
+		break;
+	default:
+		LogError("JIT :: _jit_compile_unary_expression() - cannot handle operator [%d / %s]\n", op, GetLexTokenTypeString(op));
 		break;
 	}
 
@@ -1406,6 +1453,9 @@ void _jit_compile_expression(AstNode* tree, executable* exe)
 
 	switch (tree->type)
 	{
+	case AST_UNARY_EXPR: // Unary operation
+		_jit_compile_unary_expression(tree, exe);
+		break;
 	case AST_BINARY_EXPR: // Binary operation, including logic operators
 		_jit_compile_binary_expression(tree, exe);
 		break;
