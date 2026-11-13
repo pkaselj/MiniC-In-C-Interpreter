@@ -72,13 +72,14 @@ Currently implemented grammar EBNF:
 
 <func_def> ::= "function" <id> "(" <param_list>? ")" <block>
 
-<stmt> ::= <expr> ";" | <if_stmt> | <while_stmt> | <for_stmt>
-<if_stmt> ::= "if" "(" <expr> ")" <block> ( "else" "(" <block> ")" )?
+<stmt> ::= <expr> ";" | <if_stmt> | <while_stmt> | <for_stmt> | <ret_stmt>
+<ret_stmt> ::= "return" (<expr>?) ";"
+<if_stmt> ::= "if" "(" <expr> ")" <block> ( "else" <block> )?
 <while_stmt> ::= "while" "(" <expr> ")" <block>
 <for_stmt> ::= "for" "(" <expr>? ";" <expr>? ";" <expr>? ")" <block>
 <block> ::= "{" <stmt>* "}"
 
-<expr> ::= <assignee> ("=" <assignee>)?
+<expr> ::= <assignee> ("=" <expr>)?
 <assignee> ::= <logic_or>
 <logic_or> ::= <logic_and> ("||" <logic_and>)*
 <logic_and> ::= <comparee> ("&&" <comparee>)*

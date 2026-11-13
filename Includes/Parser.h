@@ -19,6 +19,7 @@ typedef enum AstNodeType
 	AST_STR_EXPR,
 
 	AST_EXPR_STMT,
+	AST_RET_STMT,
 	AST_IF_STMT,
 	AST_FOR_STMT,
 	AST_WHILE_STMT,
@@ -76,6 +77,11 @@ struct AstNode
 		{
 			struct AstNode* expression;
 		} expr_stmt;
+
+		struct
+		{
+			struct AstNode* expression;
+		} ret_stmt;
 
 		struct
 		{

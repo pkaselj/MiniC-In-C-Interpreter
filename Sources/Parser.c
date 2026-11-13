@@ -230,6 +230,14 @@ static AstNode* ast_create_while_stmt(TRANSFER AstNode* condition,	TRANSFER AstN
 	return node;
 }
 
+static AstNode* ast_create_ret_stmt(TRANSFER AstNode* retval)
+{
+	AstNode* node = _ast_create_empty();
+	node->type = AST_RET_STMT;
+	node->u.ret_stmt.expression = retval;
+	return node;
+}
+
 static AstNode* ast_create_block(TRANSFER List* statements)
 {
 	AstNode* node = _ast_create_empty();
@@ -765,6 +773,21 @@ static AstNode* parse_if_stmt(ListConstIterator* iter)
 	return ast_create_if_stmt(cond, block_if, block_else);
 }
 
+static AstNode* parse_ret_stmt(ListConstIterator* iter)
+{
+	AstNode* retval = NULL;
+
+	_parser_expect(iter, TT_K_RET);
+
+	if (!_parser_match(iter, TT_DELIM))
+	{
+		retval = parse_expression(iter);
+		_parser_expect(iter, TT_DELIM);
+	}
+
+	return ast_create_ret_stmt(retval);
+}
+
 static AstNode* parse_statement(ListConstIterator* iter)
 {
 	Token* token = _parser_peek(iter);
@@ -773,6 +796,8 @@ static AstNode* parse_statement(ListConstIterator* iter)
 		LogError("Parser: No tokens to parse in parse_statement()\n"); // TODO: Log position
 		exit(-1);
 	}
+	else if (token->type == TT_K_RET)
+		return parse_ret_stmt(iter);
 	else if (token->type == TT_K_IF)
 		return parse_if_stmt(iter);
 	else if (token->type == TT_K_WHILE)

@@ -1,7 +1,6 @@
 #include <Utils.h>
 #include <Lexer.h>
 #include <Parser.h>
-#include <Interpreter.h>
 #include <Value.h>
 
 #include <stdarg.h>

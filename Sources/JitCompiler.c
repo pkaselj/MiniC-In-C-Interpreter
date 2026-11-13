@@ -1178,6 +1178,15 @@ void _jit_compile_while_statement(AstNode* tree, executable* exe)
 	*p1 = OFFSET_32B(rip1, _loop_test);
 }
 
+void _jit_compile_return_statement(AstNode* tree, executable* exe)
+{
+	assert(exe);
+	assert(tree);
+	assert(tree->type == AST_RET_STMT);
+
+	LogError("_jit_compile_return_statement :: Not implemented\n");
+}
+
 void _jit_compile_code_block_statement(AstNode* tree, executable* exe)
 {
 	assert(exe);
@@ -1231,6 +1240,9 @@ void _jit_compile_statement(AstNode* tree, executable* exe)
 
 	switch (tree->type)
 	{
+	case AST_RET_STMT: // return (expression);
+		_jit_compile_return_statement(tree, exe);
+		break;
 	case AST_WHILE_STMT: // While
 		_jit_compile_while_statement(tree, exe);
 		break;
