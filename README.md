@@ -43,12 +43,12 @@ The project includes an experimental Just-In-Time (JIT) compilation stage writte
     - **16-byte stack frame alignment** maintenance across call boundaries.
 
 ### Roadmap & Planned Features
-- [ ] Signed division (`idiv`) with `cdq` sign extension and remainder handling.
+- [x] Signed division (`idiv`) with `cdq` sign extension and remainder handling.
 - [x] Comparison operators and flag evaluation (`cmp`, `setcc`).
 - [ ] Logical operators
-    - [ ] `and`
-    - [ ] `or`
-    - [ ] `not`
+    - [x] `and`
+    - [x] `or`
+    - [x] `not`
     - [ ] `xor`
 - [ ] Flow control and loops (conditional/unconditional relative jumps for `if`, `while`, and `for`).
     - [x] `while` loops
