@@ -885,6 +885,7 @@ void _amd64_emit_compare_set_rax_r64_r64(executable* exe, enu_register r64_0, en
 // --------------------------------------------
 
 void _jit_compile_statement(AstNode* tree, executable* exe);
+void _jit_compile_expression(AstNode* tree, executable* exe);
 
 // -----------
 
@@ -955,7 +956,7 @@ void _jit_compile_assignment(AstNode* tree, executable* exe)
 	assert(tree->u.assign.left->type == AST_ID_EXPR); // For now support only variable assignment
 	StringView id = tree->u.assign.left->u.identifier.value;
 
-	_jit_compile_statement(tree->u.assign.right, exe); // TODO: or expression ???
+	_jit_compile_expression(tree->u.assign.right, exe);
 	// Result in RAX
 
 	if (!exe->current_symbol)
@@ -991,12 +992,12 @@ void _jit_compile_binary_expression(AstNode* tree, executable* exe)
 
 	local* _l_right = _jit_exe_allocate_local_temporary_variable(exe);
 
-	_jit_compile_statement(right, exe); // TODO: Not sure if i would use compile statement or expression?
+	_jit_compile_expression(right, exe);
 	// Result of the operation is kept in accumulator register (RAX)
 	// Store it to a local variable
 	_amd64_util_emit_store_local(exe, REG_RAX, _l_right->rbp_offset);
 
-	_jit_compile_statement(left, exe); // TODO: Not sure if i would use compile statement or expression?
+	_jit_compile_expression(left, exe);
 	// Result of the operation is kept in accumulator register (RAX)
 
 	// Load RHS to RCX
@@ -1092,7 +1093,7 @@ void _jit_compile_function_call_expression(AstNode* tree, executable* exe)
 		list_push(arg_locals, n);
 
 		// Function call can be any expression, value of it is now in RAX
-		_jit_compile_statement(arg, exe);
+		_jit_compile_expression(arg, exe);
 
 		_amd64_util_emit_store_local(exe, REG_RAX, temp->rbp_offset);
 	}
@@ -1151,20 +1152,6 @@ void _jit_compile_while_statement(AstNode* tree, executable* exe)
 	assert(tree);
 	assert(tree->type == AST_WHILE_STMT);
 
-	// TODO: I am thinking of switching to C style language
-	// with explicit return statements and distinction
-	// between expressions and statements. Currently,
-	// statements like for, while and if have the value
-	// of the last evaluated statement of their code blocks.
-	// So i have to manually load result into RAX now.
-	// Especially since i have implemented Tail-jumping loop version.
-	// This is a reminder to remove this line when i switch to
-	// statement/expression syntax.
-	// ---- STATEMENT EXPRESSION - REMOVE LATER
-	local* result = _jit_exe_allocate_local_temporary_variable(exe);
-	assert(result);
-	// ---- STATEMENT EXPRESSION - REMOVE LATER
-
 	// Tail-jumping loop implementation
 
 	// First jump to condition
@@ -1174,13 +1161,10 @@ void _jit_compile_while_statement(AstNode* tree, executable* exe)
 	// Section: Loop Body
 	unsigned char* _loop_body = exe->current_pos;
 	_jit_compile_statement(tree->u.while_stmt.block, exe);
-	// ---- STATEMENT EXPRESSION - REMOVE LATER
-	_amd64_util_emit_store_local(exe, REG_RAX, result->rbp_offset);
-	// ---- STATEMENT EXPRESSION - REMOVE LATER
 
 	// Section: Loop Condition, first instruction jumps to here
 	unsigned char* _loop_test = exe->current_pos;
-	_jit_compile_statement(tree->u.while_stmt.condition, exe);
+	_jit_compile_expression(tree->u.while_stmt.condition, exe);
 	// Result in RAX
 	_amd64_emit_test_rax_rax(exe);
 
@@ -1192,11 +1176,6 @@ void _jit_compile_while_statement(AstNode* tree, executable* exe)
 	 
 	// Populate address for first jump to loop body
 	*p1 = OFFSET_32B(rip1, _loop_test);
-
-
-	// ---- STATEMENT EXPRESSION - REMOVE LATER
-	_amd64_util_emit_load_local(exe, REG_RAX, result->rbp_offset);
-	// ---- STATEMENT EXPRESSION - REMOVE LATER
 }
 
 void _jit_compile_code_block_statement(AstNode* tree, executable* exe)
@@ -1214,9 +1193,8 @@ void _jit_compile_code_block_statement(AstNode* tree, executable* exe)
 	list_free_iterator(it);
 }
 
-// NOTE: By convention RAX register is used to store last statement's value
-// TODO: Maybe split statements from expressions, implement 'return'
-void _jit_compile_statement(AstNode* tree, executable* exe)
+// NOTE: By convention RAX register is used to store last expression's value
+void _jit_compile_expression(AstNode* tree, executable* exe)
 {
 	assert(exe);
 	assert(tree);
@@ -1239,6 +1217,20 @@ void _jit_compile_statement(AstNode* tree, executable* exe)
 	case AST_ASSIGN_EXPR: // Assignment
 		_jit_compile_assignment(tree, exe);
 		break;
+	default:
+		LogError("JIT :: _jit_compile_expression() - cannot handle node type [%d / %s]\n", tree->type, GetAstNodeTypeString(tree->type));
+		break;
+	}
+}
+
+void _jit_compile_statement(AstNode* tree, executable* exe)
+{
+	assert(exe);
+	assert(tree);
+	//assert(tree->type == ???);
+
+	switch (tree->type)
+	{
 	case AST_WHILE_STMT: // While
 		_jit_compile_while_statement(tree, exe);
 		break;
@@ -1246,7 +1238,9 @@ void _jit_compile_statement(AstNode* tree, executable* exe)
 		_jit_compile_code_block_statement(tree, exe);
 		break;
 	default:
-		LogError("JIT :: _jit_compile_statement() - cannot handle node type [%d / %s]\n", tree->type, GetAstNodeTypeString(tree->type));
+		// Treat other types of expressions as statements,
+		// ignoring their return value.
+		_jit_compile_expression(tree, exe);
 		break;
 	}
 }
