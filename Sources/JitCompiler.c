@@ -316,7 +316,7 @@ executable* _jit_exe_initialize()
 	executable* exe = (executable*)malloc(sizeof(executable));
 	assert(exe);
 
-	exe->max_size = 4096;
+	exe->max_size = 40960; // 10 pages
 	exe->page_base = VirtualAlloc(NULL, exe->max_size, MEM_COMMIT | MEM_RESERVE, PAGE_EXECUTE_READWRITE);
 	exe->current_pos = exe->page_base;
 	exe->entry_point = NULL;

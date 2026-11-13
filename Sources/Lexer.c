@@ -371,10 +371,17 @@ List* lexer_perform(const StringView input)
 			continue;
 		}
 
+		if (rem.data[0] == '\0')
+		{
+			goto _eof;
+		}
+
 		LogError("lexer_perform() - Lexer error @ index %llu, symbol [%c].\n", i, input.data[i]);
 		goto _cleanup;
 	}
 
+
+_eof:
 	return list;
 
 _cleanup:

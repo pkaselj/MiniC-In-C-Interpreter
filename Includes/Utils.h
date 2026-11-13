@@ -51,3 +51,7 @@ enum ValueType;
 const char* GetLexTokenTypeString(enum LexTokenType type);
 const char* GetAstNodeTypeString(enum AstNodeType type);
 const char* GetValueTypeString(enum ValueType type);
+
+// -------------- I/O
+
+String LoadFile(const char* path, size_t max_size);

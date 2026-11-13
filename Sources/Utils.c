@@ -421,3 +421,54 @@ void PrintValue(Value* value)
 	default:		printf("<UNKNOWN>\n"); break;
 	}
 }
+// -----------------------------------------------------
+
+String LoadFile(const char* path, size_t max_size)
+{
+	assert(path);
+
+	FILE* fp = fopen(path, "rb"); // rb beacuse of ftell
+	if (!fp)
+	{
+		return sv_create_empty();
+	}
+
+	if (fseek(fp, 0, SEEK_END) != 0)
+	{
+		fclose(fp);
+		return sv_create_empty();
+	}
+
+	size_t size = ftell(fp);
+
+	if (fseek(fp, 0, SEEK_SET) != 0)
+	{
+		fclose(fp);
+		return sv_create_empty();
+	}
+
+	if (size > max_size)
+	{
+		fclose(fp);
+		LogError("File size [%llu] more than available buffer size [%llu]\n", size, max_size);
+		return sv_create_empty();
+	}
+
+	char* buffer = malloc(size + 1);
+	assert(buffer);
+	memset(buffer, 0, size + 1);
+
+	size_t read_size = fread(buffer, 1, size, fp);
+
+	if (read_size != size)
+	{
+		fclose(fp);
+		free(buffer);
+		LogError("File size [%llu] but read only [%llu]\n", size, read_size);
+		return sv_create_empty();
+	}
+
+	fclose(fp);
+
+	return sv_create_s(buffer, size + 1);
+}
