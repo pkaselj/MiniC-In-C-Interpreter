@@ -24,6 +24,7 @@ It is still WIP and it currently implements the following (lexer and parser) fea
 - Unary operators `- + !`, where `!x` is the logical/boolean `not(x)` operator and binary logical operators `&& ||`
 - Implemented functions. Functions are defined **only at the beginning of the file (before statements)** as follows: `function fname(arg1, arg2, arg3) { expr1; expr2; }` and are called as follows: `fname(1, 2, 3)`. Return value of the function is its last executed statemened - in this case evaluated value of `expr2`.
 - Implemented variables and variable local aliasing - local variables alias global ones. Each function can access its caller's symbols. (for now, maybe remove or keep *closures*).
+- Python-style comments `#`
 
 ## Backend (JIT Compilation Engine) (x86-64)
 The project includes an experimental Just-In-Time (JIT) compilation stage written entirely in pure C without external assemblers or codegen libraries. Instead of relying solely on tree-walk interpretation, the pipeline lowers the Abstract Syntax Tree directly into native x86-64 machine code emitted into executable memory pages.
@@ -723,8 +724,42 @@ AST_S
 
 Code examples can be found in [./examples](./examples).
 
-- [Examples](./examples/)
-  - [Fibonacci Sum](./examples/fibonacci_sum.mc) - Counts the sum of first `n` Fibonacci numbers
+- [Examples](./Examples/)
+  - [Fibonacci Sum](./Examples/Fibonacci.mc) - Counts the sum of first `n` Fibonacci numbers
+  - [Factorial](./Examples/Factorial.mc) - Calculates the factorial of a number `n`
+  - [Collatz Conjecture](./Examples/Collatz.mc) - Counts the number of steps required for number `n` according to the Collatz Conjecture
+  - [Integer Inverse](./Examples/IntInv.mc) - Integer inverses a number e.g. 12345 becomes 54321
+  - [Modulo Exponent](./Examples/ModExp.mc) - Efficiently counts the following iterative expression: $b^{n} \mod {m} = ((b \mod {m}) (b^{n-1} \mod {m})) \mod {m}$
+
+#### Example: Modulo Exponent
+
+```
+# Returns b squared in m-modulo arithmetic
+function modsqr(b, m)
+{
+    return (b * b) % m;
+}
+
+# Efficient calculation of b to the power of n in m-modulo arithmetic 
+function modexp(b, n, m)
+{
+    if(n == 1)
+    {
+        return b;
+    }
+    else
+    {
+        return (modsqr(b, m) * modexp(b, n - 1, m)) % m;
+    }
+}
+
+function main()
+{
+    return modexp(5, 3, 4);
+}
+
+main();
+```
 
 ## Using the Interpreter
 
@@ -755,8 +790,9 @@ Implement in future:
 - [ ] Structures and classes
 - [ ] Noop expressions (extra delimiters `;`)
 - [ ] `||` and `&&` _shortcircuiting_
-- [ ] Comments
+- [x] Comments
 - [x] File execution
 - [ ] Function validation pass - referencing non-existing symbols
 - [ ] Scientific notation numbers
 - [x] owned String destructor
+- [x] More than 8B for addressing local variables, allowing for more than 8 local variables

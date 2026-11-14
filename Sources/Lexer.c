@@ -128,6 +128,34 @@ static void tok_free_identifier(Token* token)
 // Lexing sub-functions
 
 // Returns number of consumed characters
+static size_t lexer_parse_comment(const StringView buffer)
+{
+	size_t i = 0;
+
+	if (buffer.size < 1)
+	{
+		return i;
+	}
+
+	if (buffer.data[0] != '#')
+	{
+		return i;
+	}
+
+	while (i < buffer.size && buffer.data[i] != '\r' && buffer.data[i] != '\n')
+	{
+		i++;
+	}
+
+	while (i < buffer.size && (buffer.data[i] == '\r' || buffer.data[i] == '\n'))
+	{
+		i++;
+	}
+
+	return i;
+}
+
+// Returns number of consumed characters
 static size_t lexer_parse_whitespace(const StringView buffer)
 {
 	size_t i = 0;
@@ -317,7 +345,14 @@ List* lexer_perform(const StringView input)
 			goto _cleanup;
 		}
 
-		size_t consumed = lexer_parse_whitespace(rem);
+		size_t consumed = lexer_parse_comment(rem);
+		if (consumed != 0)
+		{
+			i += consumed;
+			continue;
+		}
+
+		consumed = lexer_parse_whitespace(rem);
 		if (consumed != 0)
 		{
 			i += consumed;

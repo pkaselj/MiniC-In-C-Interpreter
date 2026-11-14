@@ -44,6 +44,7 @@ typedef enum LexTokenType
     TT_O_BRACE,    // {
     TT_C_BRACE,    // }
     TT_DELIM,      // ;
+    TT_COMMENT,    // #
 } LexTokenType;
 
 struct Token

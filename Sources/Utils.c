@@ -193,6 +193,7 @@ const char* GetLexTokenTypeString(enum LexTokenType type)
 	case TT_O_BRACE: return "TT_O_BRACE";
 	case TT_C_BRACE: return "TT_C_BRACE";
 	case TT_DELIM: return "TT_DELIM";
+	case TT_COMMENT: return "TT_COMMENT";
 
 	default: return "<UNKNOWN>";
 	}

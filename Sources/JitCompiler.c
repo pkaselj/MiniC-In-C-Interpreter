@@ -675,52 +675,77 @@ void _amd64_emit_mov_r64_r64(executable* exe, enu_register r64_0, enu_register r
 	_jit_exe_w8(exe, _MODRM(MOD_RR, r64_1 /*op2*/, r64_0/*op1*/));
 }
 
+//// [R(rbase) + scale * R(rindex)] <- r64_1
+//void _amd64_emit_mov_m64_r64_disp8(executable* exe, enu_register r64_1, enu_register rbase, enu_sib_scale scale, enu_register rindex, uint8_t disp8)
+//{
+//	_jit_exe_w8(exe, _REX(1, 0, 0, 0)); // REX.W
+//	_jit_exe_w8(exe, 0x89);
+//	_jit_exe_w8(exe, _MODRM(MOD_O8, r64_1 /*op2*/, rbase));
+//	_jit_exe_w8(exe, disp8);
+//}
+
 // [R(rbase) + scale * R(rindex)] <- r64_1
-void _amd64_emit_mov_m64_r64_disp8(executable* exe, enu_register r64_1, enu_register rbase, enu_sib_scale scale, enu_register rindex, uint8_t disp8)
+void _amd64_emit_mov_m64_r64_disp32(executable* exe, enu_register r64_1, enu_register rbase, enu_sib_scale scale, enu_register rindex, uint32_t disp32)
 {
 	_jit_exe_w8(exe, _REX(1, 0, 0, 0)); // REX.W
 	_jit_exe_w8(exe, 0x89);
-	_jit_exe_w8(exe, _MODRM(MOD_O8, r64_1 /*op2*/, rbase));
-	_jit_exe_w8(exe, disp8);
+	_jit_exe_w8(exe, _MODRM(MOD_O32, r64_1 /*op2*/, rbase));
+	_jit_exe_w32(exe, disp32);
 }
 
 void _amd64_util_emit_store_local_rsp(executable* exe, enu_register src, uint32_t local_offset)
 {
-	uint8_t offset = _BYTE_OF(local_offset, 0);
+	//uint32_t offset = _BYTE_OF(local_offset, 0);
 
-	_amd64_emit_mov_m64_r64_disp8(exe, src, REG_RSP, SIB_S_1, REG_SIB_NO_REG, offset);
+	//_amd64_emit_mov_m64_r64_disp8(exe, src, REG_RSP, SIB_S_1, REG_SIB_NO_REG, offset);
+	_amd64_emit_mov_m64_r64_disp32(exe, src, REG_RSP, SIB_S_1, REG_SIB_NO_REG, local_offset);
 }
 
 void _amd64_util_emit_store_local(executable* exe, enu_register src, uint32_t local_offset)
 {
-	uint8_t offset = _BYTE_OF(local_offset, 0);
-	offset = (uint8_t)(-offset); // Two's complement
+	//uint32_t offset = _BYTE_OF(local_offset, 0);
+	uint32_t offset = local_offset;
+	offset = (uint32_t)(-((int32_t)offset)); // Two's complement
 
-	_amd64_emit_mov_m64_r64_disp8(exe, src, REG_RBP, SIB_S_1, REG_SIB_NO_REG, offset);
+	//_amd64_emit_mov_m64_r64_disp8(exe, src, REG_RBP, SIB_S_1, REG_SIB_NO_REG, offset);
+	_amd64_emit_mov_m64_r64_disp32(exe, src, REG_RBP, SIB_S_1, REG_SIB_NO_REG, offset);
 }
 
+//// r64_0 <- [R(rbase) + scale * R(rindex) + disp8]
+//void _amd64_emit_mov_r64_m64_disp8(executable* exe, enu_register r64_0, enu_register rbase, enu_sib_scale scale, enu_register rindex, uint8_t disp8)
+//{
+//	_jit_exe_w8(exe, _REX(1, 0, 0, 0)); // REX.W
+//	_jit_exe_w8(exe, 0x8B);
+//	_jit_exe_w8(exe, _MODRM(MOD_O8, r64_0 /*op2*/, rbase));
+//	_jit_exe_w8(exe, disp8);
+//}
+
 // r64_0 <- [R(rbase) + scale * R(rindex) + disp8]
-void _amd64_emit_mov_r64_m64_disp8(executable* exe, enu_register r64_0, enu_register rbase, enu_sib_scale scale, enu_register rindex, uint8_t disp8)
+void _amd64_emit_mov_r64_m64_disp32(executable* exe, enu_register r64_0, enu_register rbase, enu_sib_scale scale, enu_register rindex, uint32_t disp32)
 {
 	_jit_exe_w8(exe, _REX(1, 0, 0, 0)); // REX.W
 	_jit_exe_w8(exe, 0x8B);
-	_jit_exe_w8(exe, _MODRM(MOD_O8, r64_0 /*op2*/, rbase));
-	_jit_exe_w8(exe, disp8);
+	_jit_exe_w8(exe, _MODRM(MOD_O32, r64_0 /*op2*/, rbase));
+	_jit_exe_w32(exe, disp32);
 }
 
 void _amd64_util_emit_load_local_rsp(executable* exe, enu_register dest, uint32_t local_offset)
 {
-	uint8_t offset = _BYTE_OF(local_offset, 0);
+	//uint32_t offset = _BYTE_OF(local_offset, 0);
 
-	_amd64_emit_mov_r64_m64_disp8(exe, dest, REG_RSP, SIB_S_1, REG_SIB_NO_REG, offset);
+	//_amd64_emit_mov_r64_m64_disp8(exe, dest, REG_RSP, SIB_S_1, REG_SIB_NO_REG, offset);
+	_amd64_emit_mov_r64_m64_disp32(exe, dest, REG_RBP, SIB_S_1, REG_SIB_NO_REG, local_offset);
 }
 
 void _amd64_util_emit_load_local(executable* exe, enu_register dest, uint32_t local_offset)
 {
-	uint8_t offset = _BYTE_OF(local_offset, 0);
-	offset = (uint8_t)(-offset); // Two's complement
+	//uint32_t offset = _BYTE_OF(local_offset, 0);
+	uint32_t offset = local_offset;
 
-	_amd64_emit_mov_r64_m64_disp8(exe, dest, REG_RBP, SIB_S_1, REG_SIB_NO_REG, offset);
+	offset = (uint32_t)(-((int32_t)offset)); // Two's complement
+
+	//_amd64_emit_mov_r64_m64_disp8(exe, dest, REG_RBP, SIB_S_1, REG_SIB_NO_REG, offset);
+	_amd64_emit_mov_r64_m64_disp32(exe, dest, REG_RBP, SIB_S_1, REG_SIB_NO_REG, offset);
 }
 
 void _amd64_emit_pop_r64(executable* exe, enu_register r64_0)
@@ -1233,7 +1258,7 @@ void _jit_compile_function_call_expression(AstNode* tree, executable* exe)
 	if (!sym_entry)
 	{
 		StringView id = tree->u.fn_call.symbol->u.string.value;
-		LogError("[JIT] :: _jit_compile_function_call_expression() - could not find symbol [%.s]\n",
+		LogError("[JIT] :: _jit_compile_function_call_expression() - could not find symbol [%.*s]\n",
 			(int)id.size,
 			id.data);
 		// BREAK?
@@ -1594,8 +1619,7 @@ void _jit_compile_function_definition(AstNode* tree, executable* exe)
 			uint32_t rbp_offset = 8 /* return address */ + 32 /* shadow space */ + 8 * (i - 4);
 			// Keep in mind, rbp offset now is positive because it technically
 			// lives in callers stack frame
-			assert(rbp_offset < 128); // Because of disp8
-			_amd64_emit_mov_r64_m64_disp8(exe, REG_RAX, REG_RBP, SIB_S_1, REG_SIB_NO_REG, (uint8_t)rbp_offset);
+			_amd64_emit_mov_r64_m64_disp32(exe, REG_RAX, REG_RBP, SIB_S_1, REG_SIB_NO_REG, rbp_offset);
 			_amd64_util_emit_store_local(exe, REG_RAX, loc->rbp_offset);
 			break;
 		}
